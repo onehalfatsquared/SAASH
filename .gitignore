@@ -142,8 +142,5 @@ dmypy.json
 *.npy
 *.npz
 
-#testing files 
-testing
-
 #pickled objects
 *.pkl
