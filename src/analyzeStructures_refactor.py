@@ -516,7 +516,7 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
         #get the particle info for the current frame
         particle_info = get_particles(snap)
 
-        #check if there are nanoparticles in the simulation. If so, get locations
+        #check if there are nanoparticles in the simulation. If so, construct NP objects
         if (sim.nano_flag):
 
             nanoparticles = body.get_nanoparticles(particle_info, sim)
