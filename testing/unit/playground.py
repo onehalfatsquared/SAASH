@@ -52,6 +52,21 @@ def get_particles(snap):
     #return a dataframe with the relevant info for each particle
     return pd.DataFrame(particle_info)
 
+def get_particles_with_type(snap, types):
+    #return info on particles of specified types
+
+    particle_info = {
+        'type': [snap.particles.types[typeid] 
+                 for typeid in types],
+        'body': snap.particles.body,
+        'position_x': snap.particles.position[:, 0],
+        'position_y': snap.particles.position[:, 1],
+        'position_z': snap.particles.position[:, 2],
+    }
+
+    #return a dataframe with the relevant info for each particle
+    return pd.DataFrame(particle_info)
+
 
 
 
@@ -65,9 +80,14 @@ def get_ex_particle_info(frame):
 
     #get the snapshot for the current frame
     snap = snaps.read_frame(frame)
+    print(snap.particles.typeid)
+    print(np.where(snap.particles.types == 'P'))
+
+    pinfo_test = get_particles_with_type(snap, [0])
+    print(pinfo_test)
 
     #get the particle info for the current frame
-    particle_info = get_particles(snap)
+    particle_info = body.get_particle_info(snap)
 
     print(particle_info)
 
@@ -81,4 +101,4 @@ def get_ex_particle_info(frame):
 
 if __name__ == "__main__":
 
-	get_ex_particle_info(500)
+    get_ex_particle_info(500)

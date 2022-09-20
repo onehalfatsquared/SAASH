@@ -72,13 +72,22 @@ class SimInfo:
         #set the bond and nanoparticle information using ixn_file
         self.bonds = []
         self.nanos = []
+        self.interacting_types = []
+        self.nano_types        = []
         self.nano_flag = False
         self.largest_bond_distance = 0
         self.__parse_interactions(ixn_file)
 
+        #determine the dimension of the system
+        self.dim = 0
+        self.__get_dim(snap)
+
         #set the box dimension from the snap
         box = snap.configuration.box
-        self.box_dim = np.array([box[0], box[1], box[2]])
+        if (self.dim == 2):
+            self.box_dim = np.array([box[0], box[1]])
+        elif (self.dim == 3):
+            self.box_dim = np.array([box[0], box[1], box[2]])
 
         #determine the number of interacting bodies and nanoparticles from the snap
         self.num_bodies    = 0
@@ -114,6 +123,10 @@ class SimInfo:
             else:
                 raise ValueError("No interaction files could be found.")
 
+        #append new interacting atoms and nano types to these sets
+        atom_types = set()
+        nano_types = set()
+
         #open the text file and loop over it line by line
         with open(ixn_file, 'r') as f:
             for line in f:
@@ -132,6 +145,10 @@ class SimInfo:
                     bond = body.Bond(entries[0], entries[1], entries[2])
                     self.bonds.append(bond)
 
+                    #add the interacting particle types to the set
+                    atom_types.add(entries[0])
+                    atom_types.add(entries[1])
+
                 elif len(entries) == 2:
 
                     #construct a representation of the nanoparticle and add it to list
@@ -139,20 +156,52 @@ class SimInfo:
                     self.nanos.append(nano)
                     self.nano_flag = True
 
+                    #add the nano type to the set
+                    nano_types.add(entries[0])
+
                 else:
                     raise ValueError("The interaction file contains a row with an unsupported"\
                                      " number of entries. We require either 3 entries to define"\
                                      " a bond, or 2 entries to define a nanoparticle. ")
 
-        #compute the number of each type of bond and nanoparticle
+        #compute the number of types of bonds and nanoparticles
         self.num_bond_types = len(self.bonds)
         self.num_nano_types = len(self.nanos)
+
+        #construct a list to store the (unique) interacting types
+        self.interacting_types = list(atom_types)
+        self.nano_types        = list(nano_types)
 
         #compute the largest bond distance in the simulation
         bond_lengths = [bond.get_cutoff() for bond in self.bonds]
         self.largest_bond_distance = np.max(bond_lengths)
 
         return
+
+    def __get_dim(self, snap):
+        #check if the z-coordinates are all zero, which means we have a 2d simulation
+
+        #set a tolerance for being close to 0
+        zero_tol = 1e-8
+
+        #extract particle info from the given snap
+        particle_info = get_particles(snap)
+
+        #get the z-coordinates for all particles
+        z_coords = np.array(particle_list['position_z'].values)
+
+        #sum the absolute values and compare to 0
+        S = np.sum(np.abs(z_coords))
+        if (S > zero_tol):
+            self.dim = 3
+        else:
+            self.dim = 2
+
+        return
+
+
+
+
 
 
     def __get_num_bodies(self, snap):
@@ -162,20 +211,9 @@ class SimInfo:
         #extract particle info from the given snap
         particle_info = get_particles(snap)
 
-        #determine all relevant atom types in the simulation by looping over bond types
-        atom_types = set()
-        for bond in self.bonds:
-
-            #get the pair of types involved in a bond - tuple
-            p_types = bond.get_types()
-
-            #add the types to the set
-            atom_types.add(p_types[0])
-            atom_types.add(p_types[1])
-
-        #loop over all interacting particle types
+        #loop over all interacting particle types to get number of bodies
         body_set = set()
-        for atom_type in atom_types:
+        for atom_type in self.interacting_types:
 
             condition = (particle_info['type'] == atom_type)
             particle_list = set(particle_info.loc[condition]['body'])
@@ -184,14 +222,9 @@ class SimInfo:
         #set the number of bodies as the length of the body_set
         self.num_bodies = len(body_set)
 
-        #loop over nanoparticle entries to add types to array
-        nano_types = []
-        for nano in self.nanos:
-            nano_types.append(nano.get_type())
-
-        #loop over all nano types
+        #loop over all nano types to get number of nanoparticles
         body_set = set()
-        for nano_type in nano_types:
+        for nano_type in self.nano_types:
 
             ntype_mask = (particle_info['type'] == nano_type)
             nano_list  = particle_info.loc[ntype_mask]['body']

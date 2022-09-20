@@ -36,7 +36,7 @@ def get_ex_particle_info(gsd_file, frame):
     sim = test.SimInfo(snap, frames, ixn_file = ixn_file)
 
     #get the particle info for the current frame
-    particle_info = test.get_particles(snap)
+    particle_info = body.get_particle_info(snap)
 
     return particle_info, sim
 

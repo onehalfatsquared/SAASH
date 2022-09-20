@@ -108,6 +108,7 @@ class Body:
 
 		self.__position = position
 
+	#getter functions
 
 	def get_position(self):
 
@@ -125,7 +126,22 @@ class Body:
 
 
 
+def get_particle_info(snap):
+    #return the needed info to track assembly from a trajectory snap as a DataFrame
 
+    #gather the relevant data for each particle into a dictionary
+    #Note: positions need to be seperated in each coordinate
+    particle_info = {
+        'type': [snap.particles.types[typeid] 
+                 for typeid in snap.particles.typeid],
+        'body': snap.particles.body,
+        'position_x': snap.particles.position[:, 0],
+        'position_y': snap.particles.position[:, 1],
+        'position_z': snap.particles.position[:, 2],
+    }
+
+    #return a dataframe with the relevant info for each particle
+    return pd.DataFrame(particle_info)
 
 
 
