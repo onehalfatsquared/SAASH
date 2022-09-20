@@ -97,3 +97,60 @@ class Body:
 		self.__body_id = 0
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def get_nano_centers(particle_info, particle_type):
+    #get the list of coordinates for all nanoparticle centers
+
+    #get the list of all particle info for that type
+    center_list = particle_info.loc[(particle_info['type'] == particle_type)]
+
+    #extract the coordinates from this list of data
+    c_coords = np.array([np.array(center_list['position_x'].values), 
+                         np.array(center_list['position_y'].values), 
+                         np.array(center_list['position_z'].values)]).T
+
+    #return the coordinates
+    return c_coords
+
+
+
+def get_nanoparticles(particle_info, sim):
+    #construct data structures for all nanoparticles in the system
+
+    #init array to store all nanoparticles
+    nanoparticles = []
+
+    #loop over each type, appending coordinates and radii to the list
+    for i in range(sim.num_nano_types):
+
+        #grab the type and radius from the abstract nanoparticle list
+        nano_type = sim.nanos[i].get_type()
+        nano_rad  = sim.nanos[i].get_radius()
+
+        #get the coordinates of all nanoparticles of this type
+        nano_coords = get_nano_centers(particle_info, nano_type)
+
+        #for each, construct a nanoparticle object and append it to an array
+        for coordinates in nano_coords:
+            nanoparticle = Nano(nano_type, nano_rad, coordinates)
+            nanoparticles.append(nanoparticle)
+
+    #return the array of nanoparticle objects
+    return nanoparticles
+
+

@@ -239,20 +239,6 @@ def get_particles(snap):
     return pd.DataFrame(particle_info)
 
 
-def get_nano_centers(particle_info, particle_type):
-    #get the list of coordinates for all nanoparticle centers
-
-    #get the list of all particle info for that type
-    center_list = particle_info.loc[(particle_info['type'] == particle_type)]
-
-    #extract the coordinates from this list of data
-    c_coords = np.array([np.array(center_list['position_x'].values), 
-                         np.array(center_list['position_y'].values), 
-                         np.array(center_list['position_z'].values)]).T
-
-    #return the coordinates
-    return c_coords
-
 
 ####################################################################
 ################# Determine Bond Network ###########################
@@ -504,6 +490,7 @@ def analyze_structures(particle_info, sim, radius = None, center = None):
 
 
 
+
 def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = False, write_output = False):
     #get number of monomers and dimers at each frame in the sim
 
@@ -515,8 +502,6 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
 
     #gather all the relevant global info into a SimInfo object
     sim = SimInfo(snap, frames, ixn_file = ixn_file)
-    print(sim.bonds[0].get_name())
-    sys.exit()
 
     #init outfile to dump results
     if write_output:
@@ -534,19 +519,10 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
         #check if there are nanoparticles in the simulation. If so, get locations
         if (sim.nano_flag):
 
-            #init lists to store coordinates and radii of each nanoparticle
-            nano_centers = []
-            nano_radii   = []
+            nanoparticles = body.get_nanoparticles(particle_info, sim)
 
-            #loop over each type, appending coordinates and radii to the list
-            for i in range(sim.num_nano_types):
-
-                nano_type = sim.nanos[i][0]
-                nano_rad  = sim.nanos[i][1]
-                nano_coords = get_nano_centers(particle_info, nano_type)
-
-                nano_centers.append(nano_coords)
-                nano_radii.append(nano_rad)
+        sys.exit()
+            
 
 
         #analyze the structures based on nanoparticle presence
