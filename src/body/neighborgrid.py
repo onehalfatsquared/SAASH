@@ -10,10 +10,10 @@ Code modified from a 2D version created by Daniel Goldstein.
 
 
 import numpy as np
-from itertools import combinations
+from itertools import permutations
 
 
-class neigborgrid:
+class Neighborgrid:
     '''This class implements a neighborlist to faciliate the fast
     finding of nearby partilces. This implementation is for a 2D
     neighbor grid'''
@@ -37,11 +37,11 @@ class neigborgrid:
         #9 boxes around each particle
 
         self.numD     = np.zeros(self.dim, dtype=int)
-        self.xBoxSize = np.zeros(self.dim, dtype=float)
+        self.boxSize = np.zeros(self.dim, dtype=float)
 
         for i in range(self.dim):
             self.numD[i]    = np.floor((self.lim[i][1] - self.lim[i][0]) / (R/2))
-            self.BoxSize[i] = (self.lim[i][1] - self.lim[i][0]) / self.numD[i]
+            self.boxSize[i] = (self.lim[i][1] - self.lim[i][0]) / self.numD[i]
         
         self.map = {}
 
@@ -61,7 +61,7 @@ class neigborgrid:
     def convertPosToIndex(self, body):
 
         #grab the position of the body (2 or 3 dim)
-        position = body.position
+        position = body.get_position()
 
         #check if all coordinates are within the known box size
         for i in range(self.dim):
@@ -108,7 +108,7 @@ class neigborgrid:
         ''' determine all adjacent boxes to the center'''
 
         #get all possible grid shifts within range
-        indexAdjustment = combinations([-2,-1,0,1,2],self.dim)
+        indexAdjustment = permutations([-2,-1,0,1,2], self.dim)
 
         # add the adjustment to the center box and then wrap boundaries    
         for boxAdjustment in indexAdjustment:

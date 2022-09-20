@@ -18,6 +18,7 @@ import sys
 sys.path.insert(0, '../../src')
 
 from body import body
+from body import neighborgrid
 import analyzeStructures_refactor as test
 
 

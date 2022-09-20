@@ -92,9 +92,26 @@ class Particle:
 
 class Body:
 
-	def __init__(self, ):
+	def __init__(self):
 
 		self.__body_id = 0
+		self.__position = None
+
+
+
+
+
+
+
+	def set_position(self, position):
+		#manually set position of the body
+
+		self.__position = position
+
+
+	def get_position(self):
+
+		return self.__position
 
 
 

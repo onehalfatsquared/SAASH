@@ -18,6 +18,7 @@ import sys
 sys.path.insert(0, '../../src')
 
 from body import body
+from body import neighborgrid
 
 
 def distance(x0, x1, dimensions):
