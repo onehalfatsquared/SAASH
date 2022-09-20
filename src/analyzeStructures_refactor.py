@@ -94,6 +94,11 @@ class SimInfo:
         self.num_nanos     = 0
         self.__get_num_bodies(snap)
 
+        #map the interacting particle types to a hoomd integer type
+        self.type_map = {}
+        self.interacting_types_mapped = []
+        self.__construct_map(snap)
+
         #check if the number of particles is zero and throw error
         if (self.num_bodies == 0):
             raise ValueError("No bodies could be found based on the type naming"\
@@ -188,7 +193,7 @@ class SimInfo:
         particle_info = get_particles(snap)
 
         #get the z-coordinates for all particles
-        z_coords = np.array(particle_list['position_z'].values)
+        z_coords = np.array(particle_info['position_z'].values)
 
         #sum the absolute values and compare to 0
         S = np.sum(np.abs(z_coords))
@@ -198,10 +203,6 @@ class SimInfo:
             self.dim = 2
 
         return
-
-
-
-
 
 
     def __get_num_bodies(self, snap):
@@ -231,6 +232,26 @@ class SimInfo:
 
         #set the number of particles as the length of the body_set
         self.num_nanos = len(nano_list)
+
+        return
+
+    def __construct_map(self, snap):
+        #construct a mapping from a string type index to integer index using snap
+
+        #get the list of types from the snap
+        type_list = snap.particles.types
+
+        #loop over it, check for an interacting particle, map it to the index
+        for i in range(len(type_list)):
+
+            particle_type = type_list[i]
+
+            if particle_type in self.interacting_types:
+                self.type_map[particle_type] = i
+
+        for p_type in self.interacting_types:
+
+            self.interacting_types_mapped.append(self.type_map[p_type])
 
         return
 

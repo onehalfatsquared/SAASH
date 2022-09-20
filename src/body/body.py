@@ -122,7 +122,21 @@ class Body:
 
 
 
+def create_bodies(snap, sim):
+	#create an array of all bodies containing particles relevant to the assembly process
 
+	#init a list to store the bodies
+	bodies = []
+
+	#get the list of relevant particle types - hoomd index
+	interacting_types = sim.interacting_types_mapped
+
+	#create a mask for accessing particle position data, get positions+body of these types
+	mask = [i for i,x in enumerate(snap.particles.typeid) if x in interacting_types]
+    filtered_pos = snap.particles.position[mask]
+    filtered_bod = snap.particles.body[mask]
+
+    
 
 
 

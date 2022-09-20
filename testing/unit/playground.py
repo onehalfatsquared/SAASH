@@ -19,6 +19,7 @@ sys.path.insert(0, '../../src')
 
 from body import body
 from body import neighborgrid
+import analyzeStructures_refactor as test
 
 
 def distance(x0, x1, dimensions):
@@ -52,21 +53,6 @@ def get_particles(snap):
     #return a dataframe with the relevant info for each particle
     return pd.DataFrame(particle_info)
 
-def get_particles_with_type(snap, types):
-    #return info on particles of specified types
-
-    particle_info = {
-        'type': [snap.particles.types[typeid] 
-                 for typeid in types],
-        'body': snap.particles.body,
-        'position_x': snap.particles.position[:, 0],
-        'position_y': snap.particles.position[:, 1],
-        'position_z': snap.particles.position[:, 2],
-    }
-
-    #return a dataframe with the relevant info for each particle
-    return pd.DataFrame(particle_info)
-
 
 
 
@@ -77,14 +63,15 @@ def get_ex_particle_info(frame):
     frames = len(snaps)
     print(frames)
 
+    sim = test.SimInfo(snap, frames, ixn_file = ixn_file)
+    print(sim.type_map)
+    print(sim.interacting_types_mapped)
 
     #get the snapshot for the current frame
     snap = snaps.read_frame(frame)
     print(snap.particles.typeid)
-    print(np.where(snap.particles.types == 'P'))
-
-    pinfo_test = get_particles_with_type(snap, [0])
-    print(pinfo_test)
+    mask = [i for i,x in enumerate(snap.particles.typeid) if x in [10,11]]
+    print(snap.particles.position[mask])
 
     #get the particle info for the current frame
     particle_info = body.get_particle_info(snap)
@@ -101,4 +88,5 @@ def get_ex_particle_info(frame):
 
 if __name__ == "__main__":
 
+    ixn_file = "../diamonds_T3/diamond_ixn.txt"
     get_ex_particle_info(500)
