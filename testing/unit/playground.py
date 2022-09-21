@@ -58,28 +58,29 @@ def get_particles(snap):
 
 def get_ex_particle_info(frame):
 
+    #open file
     snaps = gsd.hoomd.open(name="../diamonds_T3/sd1296.gsd", mode="rb")
     snap = snaps.read_frame(0)
     frames = len(snaps)
     print(frames)
 
+    #create the simInfo
     sim = test.SimInfo(snap, frames, ixn_file = ixn_file)
     print(sim.type_map)
     print(sim.interacting_types_mapped)
 
     #get the snapshot for the current frame
     snap = snaps.read_frame(frame)
-    print(snap.particles.typeid)
-    mask = [i for i,x in enumerate(snap.particles.typeid) if x in sim.interacting_types_mapped]
-    print(snap.particles.position[mask])
-    print(snap.particles.body[mask])
 
-    #get the particle info for the current frame
-    particle_info = body.get_particle_info(snap)
+    #do tests on extracting types and grabbing fields corresponding to given types
+    # print(snap.particles.typeid)
+    # mask = [i for i,x in enumerate(snap.particles.typeid) if x in sim.interacting_types_mapped]
+    # print(snap.particles.position[mask])
+    # print(snap.particles.body[mask])
 
-    print(particle_info)
-
-    body.create_bodies(snap, sim)
+    #test creating bodies from the snap
+    bodies = body.create_bodies(snap, sim)
+    print(bodies[77].get_particles()[1].get_type())
 
 
 
@@ -91,5 +92,8 @@ def get_ex_particle_info(frame):
 
 if __name__ == "__main__":
 
+    gsd_file = "../diamonds_T3/sd1296.gsd"
     ixn_file = "../diamonds_T3/diamond_ixn.txt"
-    get_ex_particle_info(500)
+    # get_ex_particle_info(500)
+
+    test.run_analysis(gsd_file, ixn_file = ixn_file)

@@ -42,9 +42,19 @@ def get_ex_particle_info(gsd_file, frame):
 
 
 
-def test_nano_create(particle_info, sim):
+def test_nano_create(gsd_file, ixn_file, frame):
 
-    nanoparticles = body.get_nanoparticles(particle_info, sim)
+    snaps = gsd.hoomd.open(name=gsd_file, mode="rb")
+    snap = snaps.read_frame(frame)
+    frames = len(snaps)
+
+    #get the snapshot for the current frame
+    snap = snaps.read_frame(frame)
+
+    #get siminfo
+    sim = test.SimInfo(snap, frames, ixn_file = ixn_file)
+
+    nanoparticles = body.get_nanoparticles(snap, sim)
     for i in range(len(nanoparticles)):
         nt = nanoparticles[i].get_type()
         nr = nanoparticles[i].get_radius()
@@ -66,4 +76,4 @@ if __name__ == "__main__":
     #get siminfo and particle info
     particle_info, sim = get_ex_particle_info(gsd_file, 500)
 
-    test_nano_create(particle_info, sim)
+    test_nano_create(gsd_file, ixn_file, frame)

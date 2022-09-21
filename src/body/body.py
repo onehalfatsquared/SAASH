@@ -1,6 +1,9 @@
 '''
 
-This file contains the class implemntations for bodies, particles, and bonds. 
+This file contains the class implemntations for bodies, particles, bonds, and 
+nanoparticles. 
+
+Also contains utitility functions for doing computations on these objects.  
 
 '''
 
@@ -12,6 +15,11 @@ import pandas as pd
 import warnings
 import sys
 import os
+
+
+####################################################################
+################# Class Implementations  ###########################
+####################################################################
 
 
 class Nano:
@@ -36,7 +44,7 @@ class Nano:
     def get_radius(self):
 
         return self.__radius
-        
+
 
 class Bond:
 
@@ -152,9 +160,100 @@ class Body:
 
 
 
+####################################################################
+################# Utility and Data Extraction ######################
+####################################################################
+
+
+def distance(x0, x1, dimensions):
+    #get the distance between the points x0 and x1
+    #assumes periodic BC with box dimensions given in dimensions
+
+    #get distance between particles in each dimension
+    delta = np.abs(x0 - x1)
+
+    #if distance is further than half the box, use the closer image
+    delta = np.where(delta > 0.5 * dimensions, delta - dimensions, delta)
+
+    #compute and return the distance between the correct set of images
+    return np.sqrt((delta ** 2).sum(axis=-1))
+
+
+def get_particle_info(snap):
+    #return the needed info to track assembly from a trajectory snap as a DataFrame
+
+    #gather the relevant data for each particle into a dictionary
+    #Note: positions need to be seperated in each coordinate
+    particle_info = {
+        'type': [snap.particles.types[typeid] 
+                 for typeid in snap.particles.typeid],
+        'body': snap.particles.body,
+        'position_x': snap.particles.position[:, 0],
+        'position_y': snap.particles.position[:, 1],
+        'position_z': snap.particles.position[:, 2],
+    }
+
+    #return a dataframe with the relevant info for each particle
+    return pd.DataFrame(particle_info)
+
+
+def get_nano_centers_old(particle_info, particle_type):
+    #get the list of coordinates for all nanoparticle centers
+
+    #get the list of all particle info for that type
+    center_list = particle_info.loc[(particle_info['type'] == particle_type)]
+
+    #extract the coordinates from this list of data
+    c_coords = np.array([np.array(center_list['position_x'].values), 
+                         np.array(center_list['position_y'].values), 
+                         np.array(center_list['position_z'].values)]).T
+
+    #return the coordinates
+    return c_coords
+
+
+def get_nano_centers(snap, sim, particle_type):
+    #get the coordinates for the center of each nanoparticle of the specified type
+
+    #get the hoomd int index corresponding to the string particle type
+    hoomd_nano_type = sim.type_map[particle_type]
+
+    #create a mask to get indices for all nanoparticles of the given type
+    mask = [i for i,x in enumerate(snap.particles.typeid) if x == hoomd_nano_type]
+    filtered_pos   = snap.particles.position[mask]
+
+    #check if problem is 2d or 3d. Cut out z component if 2d
+    if (sim.dim == 2):
+        filtered_pos = filtered_pos[:,0:2]
+
+    return filtered_pos
 
 
 
+def get_nanoparticles(snap, sim):
+    #construct data structures for all nanoparticles in the system
+
+    #init array to store all nanoparticles
+    nanoparticles = []
+
+    #loop over each type, appending coordinates and radii to the list
+    for i in range(sim.num_nano_types):
+
+        #grab the type and radius from the abstract nanoparticle list
+        nano_type = sim.nanos[i].get_type()
+        nano_rad  = sim.nanos[i].get_radius()
+
+        #get the coordinates of all nanoparticles of this type
+        # nano_coords = get_nano_centers(particle_info, hoomd_nano_type)
+        nano_coords = get_nano_centers(snap, sim, nano_type)
+
+        #for each, construct a nanoparticle object and append it to an array
+        for coordinates in nano_coords:
+            nanoparticle = Nano(nano_type, nano_rad, coordinates)
+            nanoparticles.append(nanoparticle)
+
+    #return the array of nanoparticle objects
+    return nanoparticles
 
 
 
@@ -172,6 +271,10 @@ def create_bodies(snap, sim):
     filtered_pos   = snap.particles.position[mask]
     filtered_bod   = snap.particles.body[mask]
     filtered_types = snap.particles.typeid[mask]
+
+    #check if problem is 2d or 3d. Cut out z component if 2d
+    if (sim.dim == 2):
+        filtered_pos = filtered_pos[:,0:2]
 
     #map the filtered_types from hoomd ints back into text strings for particle creation
     filtered_types = np.array([snap.particles.types[element] for element in filtered_types])
@@ -201,65 +304,5 @@ def create_bodies(snap, sim):
     return bodies
         
 
-
-def get_particle_info(snap):
-    #return the needed info to track assembly from a trajectory snap as a DataFrame
-
-    #gather the relevant data for each particle into a dictionary
-    #Note: positions need to be seperated in each coordinate
-    particle_info = {
-        'type': [snap.particles.types[typeid] 
-                 for typeid in snap.particles.typeid],
-        'body': snap.particles.body,
-        'position_x': snap.particles.position[:, 0],
-        'position_y': snap.particles.position[:, 1],
-        'position_z': snap.particles.position[:, 2],
-    }
-
-    #return a dataframe with the relevant info for each particle
-    return pd.DataFrame(particle_info)
-
-
-
-
-def get_nano_centers(particle_info, particle_type):
-    #get the list of coordinates for all nanoparticle centers
-
-    #get the list of all particle info for that type
-    center_list = particle_info.loc[(particle_info['type'] == particle_type)]
-
-    #extract the coordinates from this list of data
-    c_coords = np.array([np.array(center_list['position_x'].values), 
-                         np.array(center_list['position_y'].values), 
-                         np.array(center_list['position_z'].values)]).T
-
-    #return the coordinates
-    return c_coords
-
-
-
-def get_nanoparticles(particle_info, sim):
-    #construct data structures for all nanoparticles in the system
-
-    #init array to store all nanoparticles
-    nanoparticles = []
-
-    #loop over each type, appending coordinates and radii to the list
-    for i in range(sim.num_nano_types):
-
-        #grab the type and radius from the abstract nanoparticle list
-        nano_type = sim.nanos[i].get_type()
-        nano_rad  = sim.nanos[i].get_radius()
-
-        #get the coordinates of all nanoparticles of this type
-        nano_coords = get_nano_centers(particle_info, nano_type)
-
-        #for each, construct a nanoparticle object and append it to an array
-        for coordinates in nano_coords:
-            nanoparticle = Nano(nano_type, nano_rad, coordinates)
-            nanoparticles.append(nanoparticle)
-
-    #return the array of nanoparticle objects
-    return nanoparticles
 
 

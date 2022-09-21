@@ -78,9 +78,12 @@ class SimInfo:
         self.largest_bond_distance = 0
         self.__parse_interactions(ixn_file)
 
+        #get a particle info dataframe to do following computations
+        particle_info = body.get_particle_info(snap)
+
         #determine the dimension of the system
         self.dim = 0
-        self.__get_dim(snap)
+        self.__get_dim(particle_info)
 
         #set the box dimension from the snap
         box = snap.configuration.box
@@ -92,7 +95,7 @@ class SimInfo:
         #determine the number of interacting bodies and nanoparticles from the snap
         self.num_bodies    = 0
         self.num_nanos     = 0
-        self.__get_num_bodies(snap)
+        self.__get_num_bodies(particle_info)
 
         #map the interacting particle types to a hoomd integer type
         self.type_map = {}
@@ -183,14 +186,11 @@ class SimInfo:
 
         return
 
-    def __get_dim(self, snap):
+    def __get_dim(self, particle_info):
         #check if the z-coordinates are all zero, which means we have a 2d simulation
 
         #set a tolerance for being close to 0
         zero_tol = 1e-8
-
-        #extract particle info from the given snap
-        particle_info = get_particles(snap)
 
         #get the z-coordinates for all particles
         z_coords = np.array(particle_info['position_z'].values)
@@ -205,12 +205,9 @@ class SimInfo:
         return
 
 
-    def __get_num_bodies(self, snap):
+    def __get_num_bodies(self, particle_info):
         #get the number of subunits in the simulation by counting bodies including any 
         #of the interacting particle types. Also get the number of nanoparticles. 
-
-        #extract particle info from the given snap
-        particle_info = get_particles(snap)
 
         #loop over all interacting particle types to get number of bodies
         body_set = set()
@@ -249,48 +246,14 @@ class SimInfo:
             if particle_type in self.interacting_types:
                 self.type_map[particle_type] = i
 
+            if particle_type in self.nano_types:
+                self.type_map[particle_type] = i
+
         for p_type in self.interacting_types:
 
             self.interacting_types_mapped.append(self.type_map[p_type])
 
         return
-
-
-####################################################################
-################# Utility and Data Extraction ######################
-####################################################################
-            
-
-def distance(x0, x1, dimensions):
-    #get the distance between the points x0 and x1
-    #assumes periodic BC with box dimensions given in dimensions
-
-    #get distance between particles in each dimension
-    delta = np.abs(x0 - x1)
-
-    #if distance is further than half the box, use the closer image
-    delta = np.where(delta > 0.5 * dimensions, delta - dimensions, delta)
-
-    #compute and return the distance between the correct set of images
-    return np.sqrt((delta ** 2).sum(axis=-1))
-
-
-def get_particles(snap):
-    #return the needed info to track assembly from a trajectory snap as a DataFrame
-
-    #gather the relevant data for each particle into a dictionary
-    #Note: positions need to be seperated in each coordinate
-    particle_info = {
-        'type': [snap.particles.types[typeid] 
-                 for typeid in snap.particles.typeid],
-        'body': snap.particles.body,
-        'position_x': snap.particles.position[:, 0],
-        'position_y': snap.particles.position[:, 1],
-        'position_z': snap.particles.position[:, 2],
-    }
-
-    #return a dataframe with the relevant info for each particle
-    return pd.DataFrame(particle_info)
 
 
 
@@ -567,13 +530,10 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
         #get the snapshot for the current frame
         snap = snaps.read_frame(frame)
 
-        #get the particle info for the current frame
-        particle_info = get_particles(snap)
-
         #check if there are nanoparticles in the simulation. If so, construct NP objects
         if (sim.nano_flag):
 
-            nanoparticles = body.get_nanoparticles(particle_info, sim)
+            nanoparticles = body.get_nanoparticles(snap, sim)
 
         sys.exit()
             
