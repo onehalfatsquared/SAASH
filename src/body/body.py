@@ -16,103 +16,139 @@ import os
 
 class Nano:
 
-	def __init__(self, ntype, radius, position = None):
+    def __init__(self, ntype, radius, position = None):
 
-		#set the variables given that define a nanoparticle
-		self.__position = position
-		self.__ntype    = ntype
-		self.__radius   = radius
+        #set the variables given that define a nanoparticle
+        self.__position = position
+        self.__ntype    = ntype
+        self.__radius   = radius
 
-	#getter functions 
+    #getter functions 
 
-	def get_position(self):
+    def get_position(self):
 
-		return self.__position
+        return self.__position
 
-	def get_type(self):
+    def get_type(self):
 
-		return self.__ntype
+        return self.__ntype
 
-	def get_radius(self):
+    def get_radius(self):
 
-		return self.__radius
+        return self.__radius
+        
 
 class Bond:
 
-	def __init__(self, type1, type2, cutoff):
+    def __init__(self, type1, type2, cutoff):
 
-		#set the variables given that define the bond
-		self.__type1  = type1
-		self.__type2  = type2
-		self.__cutoff = cutoff
+        #set the variables given that define the bond
+        self.__type1  = type1
+        self.__type2  = type2
+        self.__cutoff = cutoff
 
-		#give the bond a descriptive strign name - "type1-type2"
-		self.__bond_name = type1 + "-" + type2
+        #give the bond a descriptive strign name - "type1-type2"
+        self.__bond_name = type1 + "-" + type2
 
-	#getter functions
+    #getter functions
 
-	def get_types(self):
+    def get_types(self):
 
-		return tuple((self.__type1, self.__type2))
+        return tuple((self.__type1, self.__type2))
 
-	def get_cutoff(self):
+    def get_cutoff(self):
 
-		return self.__cutoff
+        return self.__cutoff
 
-	def get_name(self):
+    def get_name(self):
 
-		return self.__bond_name
+        return self.__bond_name
 
 
 
 class Particle:
 
-	def __init__(self, position, p_type, body_id):
+    def __init__(self, position, p_type, body):
 
-		#set the variables given in constructor
-		self.__position = position
-		self.__p_type   = p_type
-		self.__body_id  = body_id
+        #set the variables given in constructor
+        self.__position = position
+        self.__p_type   = p_type
+        self.__body     = body
 
-	#getter functions 
+        #get the body id from the body object
+        self.__body_id  = body.get_id()
 
-	def get_position(self):
+    #getter functions 
 
-		return self.__position
+    def get_position(self):
 
-	def get_type(self):
+        return self.__position
 
-		return self.__p_type
+    def get_type(self):
 
-	def get_body(self):
+        return self.__p_type
 
-		return __body_id
+    def get_body_id(self):
+
+        return self.__body_id
+
+    def get_body(self):
+
+        return self.__body
 
 
 
 class Body:
 
-	def __init__(self):
+    def __init__(self, particle_pos, particle_type, body_index):
 
-		self.__body_id = 0
-		self.__position = None
+        #set the body index - corresponds to placement in the array of bodies
+        self.__body_index = body_index
 
+        #init a center of mass variable for the body
+        center_mass = particle_pos[0] * 0
 
+        #init an array for particle objects. 
+        self.__num_particles = len(particle_pos)
+        self.__particles = []
 
+        #create the particle objects and append to array
+        for i in range(self.__num_particles):
 
+            #create and append particle
+            particle = Particle(particle_pos[i], particle_type[i], self)
+            self.__particles.append(particle)
 
+            #update the center of mass
+            center_mass += particle_pos[i]
 
+        #divide center of mass by num particles and set it
+        self.__center_mass = center_mass / self.__num_particles
 
-	def set_position(self, position):
-		#manually set position of the body
+    #setter functions
 
-		self.__position = position
+    def set_position(self, position):
+        #manually set position of the body
 
-	#getter functions
+        self.__position = position
 
-	def get_position(self):
+    #getter functions
 
-		return self.__position
+    def get_position(self):
+
+        return self.__center_mass
+
+    def get_id(self):
+
+        return self.__body_index
+
+    def get_num_particles(self):
+
+        return self.__num_particles
+
+    def get_particles(self):
+
+        return self.__particles
 
 
 
@@ -123,21 +159,47 @@ class Body:
 
 
 def create_bodies(snap, sim):
-	#create an array of all bodies containing particles relevant to the assembly process
+    #create an array of all bodies containing particles relevant to the assembly process
 
-	#init a list to store the bodies
-	bodies = []
+    #init a list to store the bodies
+    bodies = []
 
-	#get the list of relevant particle types - hoomd index
-	interacting_types = sim.interacting_types_mapped
+    #get the list of relevant particle types - hoomd index
+    interacting_types = sim.interacting_types_mapped
 
-	#create a mask for accessing particle position data, get positions+body of these types
-	mask = [i for i,x in enumerate(snap.particles.typeid) if x in interacting_types]
-    filtered_pos = snap.particles.position[mask]
-    filtered_bod = snap.particles.body[mask]
+    #create a mask for accessing particle position data, get positions+body of these types
+    mask = [i for i,x in enumerate(snap.particles.typeid) if x in interacting_types]
+    filtered_pos   = snap.particles.position[mask]
+    filtered_bod   = snap.particles.body[mask]
+    filtered_types = snap.particles.typeid[mask]
 
-    
+    #map the filtered_types from hoomd ints back into text strings for particle creation
+    filtered_types = np.array([snap.particles.types[element] for element in filtered_types])
 
+    #create a set of the masked bodies to get the unique ids
+    unique_bods = set(filtered_bod)
+
+    #loop over the masked bodies, creating a Body object with the relevant particles
+    body_index = 0    #init a counter so body indexing starts at 0
+    for body_id in unique_bods:
+
+        #create a sub-mask to get only particles part of the current body
+        sub_mask = [i for i,x in enumerate(filtered_bod) if x == body_id]
+
+        #get the positions and types or particles at the indices set by this submask
+        particle_positions = filtered_pos[sub_mask]
+        particle_types     = filtered_types[sub_mask]
+
+        #create the body, append it to the list
+        current_body = Body(particle_positions, particle_types, body_index)
+        bodies.append(current_body)
+
+        #increment body counter
+        body_index += 1
+
+    #return the list of bodies
+    return bodies
+        
 
 
 def get_particle_info(snap):

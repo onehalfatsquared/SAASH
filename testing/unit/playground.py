@@ -70,13 +70,16 @@ def get_ex_particle_info(frame):
     #get the snapshot for the current frame
     snap = snaps.read_frame(frame)
     print(snap.particles.typeid)
-    mask = [i for i,x in enumerate(snap.particles.typeid) if x in [10,11]]
+    mask = [i for i,x in enumerate(snap.particles.typeid) if x in sim.interacting_types_mapped]
     print(snap.particles.position[mask])
+    print(snap.particles.body[mask])
 
     #get the particle info for the current frame
     particle_info = body.get_particle_info(snap)
 
     print(particle_info)
+
+    body.create_bodies(snap, sim)
 
 
 
