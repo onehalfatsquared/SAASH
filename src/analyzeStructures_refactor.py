@@ -40,6 +40,7 @@ import sys
 import os
 
 from body import body
+from body import neighborgrid as ng
 
 #this is a hack for now. make this more general later. WARNING: increase this size to be 
 #larger than the largest structure you see in your simulations
@@ -101,6 +102,10 @@ class SimInfo:
         self.type_map = {}
         self.interacting_types_mapped = []
         self.__construct_map(snap)
+
+        #construct a neighborgrid using the sim box and info on interaction ranges
+        self.ngrid = None
+        self.__create_neighbor_grid()
 
         #check if the number of particles is zero and throw error
         if (self.num_bodies == 0):
@@ -255,11 +260,49 @@ class SimInfo:
 
         return
 
+    def __create_neighbor_grid(self):
+        #construct a neighbor grid for the simulation
+
+        #init arrays to store the bounding box limits and periodicity
+        lims     = []
+        periodic = []
+
+        #loop over each dimension of the box
+        for i in range(len(self.box_dim)):
+
+            #the box goes from -L/2 to L/2
+            lims.append([-self.box_dim[i] / 2.0 , self.box_dim[i] / 2.0])
+
+            #Assume that the simulations are periodic in each dimension
+            periodic.append(1)
+
+        #set the interaction range as the longest bond dist in the simulation
+        R = sim.largest_bond_distance
+
+        #construct the neighborgrid
+        self.ngrid = ng.Neighborgrid(lims, R, periodic)
+
+        return
+
+
+
 
 
 ####################################################################
 ################# Determine Bond Network ###########################
 ####################################################################
+
+def get_bonded_bodies(bodies, sim, bond_dict):
+    #determine bonded bodies by looping over each neighborhood, bond type, and particle
+
+    #extract and update the neighborgrid using the current bodies info
+    ngrid = sim.ngrid
+    ngrid.update(bodies)
+    #loop over each body
+    for current_body in bodies:
+
+        #get all the nearby bodies from the neighborgrid
+
 
 
 def get_bonded_subunits(p1_coords, p1_bods, p2_coords, p2_bods, bond_dict, box_dim, cutoff):
@@ -451,11 +494,20 @@ def get_group_sizes(G):
 ####################################################################
 
 
-def analyze_structures(particle_info, sim, radius = None, center = None):
+def analyze_structures(snap, sim, radius = None, center = None):
     #analyze clusters of subunits and their connectivity
 
-    #init a disctionary to store the bonds present
+    #get a list of bodies to analyze
+    bodies = body.create_bodies(snap, sim)
+
+    #init a dictionary to store the bonds present - init with empty lists for each body_id
     bond_dict = dict()
+    for bod in bodies:
+        bond_dict[bod.get_id()] = []
+
+    #determine the bond network using the list of bodies
+
+
 
     #get all pairs of interacting particle types that are bonded. log the pairwise body
     #bond matrix in the bond_dict
@@ -535,13 +587,10 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
 
             nanoparticles = body.get_nanoparticles(snap, sim)
 
-        sys.exit()
-            
-
-
         #analyze the structures based on nanoparticle presence
         if (not sim.nano_flag):
-            q = analyze_structures(particle_info, sim)
+
+            q = analyze_structures(snap, sim)
 
         else:
             q = []
@@ -552,6 +601,8 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
                     center = nano_centers[nano_type][nanoparticle]
                     q_i    = analyze_structures(particle_info, sim, r, center) 
                     q.append(q_i) 
+
+        sys.exit()
 
         #write to file
         if write_output:

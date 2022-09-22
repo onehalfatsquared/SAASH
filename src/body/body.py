@@ -86,6 +86,54 @@ class Particle:
         #get the body id from the body object
         self.__body_id  = body.get_id()
 
+
+    def is_bonded(self, particle, cutoff, box):
+        #determine if this particle is bonded to the given particle
+
+        #get the periodic distance between the particles
+        particle_distance = distance(self.__position, particle.get_position(), box)
+
+        #compare to given cutoff
+        if (particle_distance < cutoff):
+            return True
+        
+        return False
+
+    def bind(self, particle, bond_dict = None):
+        #bind the two particles together by augmenting their bodies bond list
+
+        #get the host and target particle body
+        target_body = particle.get_body()
+        host_body   = self.__body
+
+        #get the id of each of these bodies
+        target_body_id = target_body.get_id()
+        host_body_id   = host_body.get_id()
+
+        #bind the host particle body to the given particle body
+        if not host_body.is_bonded(target_body):
+
+            #bind on the body level
+            host_body.bind(target_body)
+
+            #add indices to bond dict
+            if (bond_dict is not None):
+                bond_dict[host_body_id].append(target_body_id)
+
+        #bind the given body to the host particle
+        if not target_body.is_bonded(host_body):
+
+            #bind on the body level
+            target_body.bind(host_body)
+
+            #add indices to bond dict
+            if (bond_dict is not None):
+                bond_dict[target_body_id].append(host_body_id)
+
+
+
+
+
     #getter functions 
 
     def get_position(self):
@@ -113,12 +161,16 @@ class Body:
         #set the body index - corresponds to placement in the array of bodies
         self.__body_index = body_index
 
+        #init a list to store bonds - bodies in this list are bound
+        self.__bond_list = []
+
         #init a center of mass variable for the body
         center_mass = particle_pos[0] * 0
 
         #init an array for particle objects. 
         self.__num_particles = len(particle_pos)
         self.__particles = []
+        self.__particle_type_map = dict()
 
         #create the particle objects and append to array
         for i in range(self.__num_particles):
@@ -127,11 +179,35 @@ class Body:
             particle = Particle(particle_pos[i], particle_type[i], self)
             self.__particles.append(particle)
 
+            #add this particle ID to the type dictionary
+            if (particle_type[i] in self.__particle_type_map.keys()):
+
+                self.__particle_type_map[particle_type[i]].append(i)
+            else:
+
+                #the type is not yet a key, so associate an empty list and append this index
+                self.__particle_type_map[particle_type[i]] = []
+                self.__particle_type_map[particle_type[i]].append(i)
+
             #update the center of mass
             center_mass += particle_pos[i]
 
         #divide center of mass by num particles and set it
-        self.__center_mass = center_mass / self.__num_particles
+        self.__position = center_mass / self.__num_particles
+
+
+    def is_bonded(self, body):
+        #determine if the host body is already bonded to the given one
+
+        if body in self.__bond_list:
+            return True
+
+        return False
+
+    def bind(self, body):
+        #append the body to the hosts bond list
+
+        self.__bond_list.append(body)
 
     #setter functions
 
@@ -144,7 +220,7 @@ class Body:
 
     def get_position(self):
 
-        return self.__center_mass
+        return self.__position
 
     def get_id(self):
 
@@ -158,7 +234,13 @@ class Body:
 
         return self.__particles
 
+    def get_particles_by_type(self, particle_type):
 
+        return [particle for particle in self.__particles if particle.get_type() == particle_type]
+
+    def get_bond_list(self):
+
+        return self.__bond_list
 
 ####################################################################
 ################# Utility and Data Extraction ######################

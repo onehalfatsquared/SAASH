@@ -80,7 +80,8 @@ def get_ex_particle_info(frame):
 
     #test creating bodies from the snap
     bodies = body.create_bodies(snap, sim)
-    print(bodies[77].get_particles()[1].get_type())
+    print(bodies[1199].get_particles()[2].get_type())
+    print(bodies[1199].get_particles_by_type("A5A"))
 
 
 
@@ -94,6 +95,6 @@ if __name__ == "__main__":
 
     gsd_file = "../diamonds_T3/sd1296.gsd"
     ixn_file = "../diamonds_T3/diamond_ixn.txt"
-    # get_ex_particle_info(500)
+    get_ex_particle_info(500)
 
-    test.run_analysis(gsd_file, ixn_file = ixn_file)
+    # test.run_analysis(gsd_file, ixn_file = ixn_file)

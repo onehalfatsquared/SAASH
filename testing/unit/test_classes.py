@@ -5,6 +5,8 @@ import pytest
 import sys
 sys.path.insert(0, '../../src')
 
+import numpy as np
+
 from body import body
 from body import neighborgrid
  
@@ -41,7 +43,7 @@ def testNeighborGrid():
 	for i in range(10):
 		for j in range(10):
 
-				b = body.Body()
+				b = body.Body(np.array([[1,1]]),[1],1)
 				b.set_position((i,j))
 				bodies.append(b)
 
@@ -55,6 +57,52 @@ def testNeighborGrid():
 	assert(len(list(ng.getNeighborhood(test_body))) == 6)
 
 	return
+
+def testBodyBind():
+
+	#create test bodies using arbitrary data
+	particle1_positions = np.array([[1,1],[2,1]])
+	particle1_types     = ['A', 'A']
+	body1               = body.Body(particle1_positions, particle1_types, 0)
+
+	particle2_positions = np.array([[2,1],[1,2]])
+	particle2_types     = ['B', 'B']
+	body2               = body.Body(particle2_positions, particle2_types, 1)
+
+	#run a bind check on particles and bind the bodies
+	test_particle1 = body1.get_particles()[0]
+	test_particle2 = body2.get_particles()[1]
+	test_particle2b = body2.get_particles()[0]
+
+
+	if not test_particle1.get_body().is_bonded(test_particle2.get_body()):
+		test_particle1.bind(test_particle2)
+
+	#check if body 1 is binded to body 2 and vise versa
+	bf = body1.is_bonded(body2)
+	bb = body2.is_bonded(body1)
+	assert(bf == True)
+	assert(bb == True)
+
+	#get the bond list for body1, check if the entry is body with id 1
+	bond_list = body1.get_bond_list()
+	assert(bond_list[0].get_id() == 1)
+
+	#try to do the same in reverse to see if it gets stopped
+	if not test_particle2b.get_body().is_bonded(test_particle1.get_body()):
+		test_particle2b.bind(test_particle1)
+
+	#check that the bond list only has a single entry
+	bond_list = body2.get_bond_list()
+	assert(bond_list[0].get_id() == 0)
+	assert(len(bond_list) == 1)
+
+
+
+
+
+#Todo - write a test to check if body A binds to body B, if the reverse check works correctly
+
 
 
 
@@ -72,3 +120,4 @@ if __name__ == "__main__":
 
 	testBonds()
 	testNeighborGrid()
+	testBodyBind()
