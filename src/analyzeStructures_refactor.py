@@ -292,17 +292,89 @@ class SimInfo:
 ################# Determine Bond Network ###########################
 ####################################################################
 
+def check_particle_pairs(particles1, particles2, cutoff, sim, bond_dict):
+    #check if any of the particle1's are within cutoff of particle2's
+
+    #do pairwise comparisons between each particle
+    for particle1 in particles1:
+        for particle2 in particles2:
+
+            #check if particles are within cutoff. If so, create a bond between bodies
+            if (particle1.is_bonded(particle2, cutoff, sim.box_dim)):
+                particle1.bind(particle2, bond_dict)
+                return True
+
+    #if none of the particles have a bond, return False
+    return False
+
+
+
+def check_body_pair(body1, body2, sim, bond_dict):
+    ''' Check if the pair of bodies contains particles that are within the cutoff of a 
+        given bond type. If one is found, we assume the bodies are bonded and stop 
+        checking for further bonds
+    '''
+
+    #loop over each bond type 
+    for bond in sim.bonds:
+
+        #get the two particle types involved in this bond
+        type1, type2 = bond.get_types()
+        cutoff       = bond.get_cutoff()
+
+        #first get all type 1 on body 1 and type 2 on body 2
+        particles1 = body1.get_particles_by_type(type1)
+        particles2 = body2.get_particles_by_type(type2)
+
+        #do pairwise comparisons between each particle
+        found_bond = check_particle_pairs(particles1, particles2, cutoff, bond_dict)
+        if (found_bond):
+            return
+
+        #if two particles types are the same, we are done with this bond type
+        if type1 == type2:
+            continue
+
+        #if the two particles types are different, the reverse check must be performed
+        particles1 = body1.get_particles_by_type(type2)
+        particles2 = body2.get_particles_by_type(type1)
+
+        #do pairwise comparisons between each particle
+        found_bond = check_particle_pairs(particles1, particles2, cutoff, bond_dict)
+        if (found_bond):
+            return
+
+    return
+
+
+
+
 def get_bonded_bodies(bodies, sim, bond_dict):
     #determine bonded bodies by looping over each neighborhood, bond type, and particle
 
     #extract and update the neighborgrid using the current bodies info
     ngrid = sim.ngrid
     ngrid.update(bodies)
+
     #loop over each body
     for current_body in bodies:
 
         #get all the nearby bodies from the neighborgrid
+        nearby_bodies = ngrid.getNeighborhood(current_body)
 
+        #loop over nearby bodies, checking for formation of each bond type
+        for target_body in nearby_bodies:
+
+            #check that these bodies are not already bonded. if so, go to next
+            if (current_body.is_bonded(target_body)):
+                continue
+
+            #check if the two bodies contain bonded particles and update accordingly
+            check_body_pair(current_body, target_body, sim, bond_dict)
+
+    return
+
+            
 
 
 def get_bonded_subunits(p1_coords, p1_bods, p2_coords, p2_bods, bond_dict, box_dim, cutoff):
