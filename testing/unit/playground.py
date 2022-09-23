@@ -93,8 +93,21 @@ def get_ex_particle_info(frame):
 
 if __name__ == "__main__":
 
+    #dimaond test
     gsd_file = "../diamonds_T3/sd1296.gsd"
     ixn_file = "../diamonds_T3/diamond_ixn.txt"
-    get_ex_particle_info(500)
 
-    # test.run_analysis(gsd_file, ixn_file = ixn_file)
+    #t3 triangle test
+    gsd_file = "../triangles_T3/nano_test.gsd"
+    ixn_file = "../triangles_T3/interactionsT3.txt"
+
+    #patchy 2d test
+    gsd_file = "../patchy_2d/traj.gsd"
+    ixn_file = "../patchy_2d/interactions.txt"
+
+
+
+
+    # get_ex_particle_info(500)
+
+    test.run_analysis(gsd_file, ixn_file = ixn_file)

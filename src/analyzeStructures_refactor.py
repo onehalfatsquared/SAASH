@@ -88,6 +88,8 @@ class SimInfo:
 
         #set the box dimension from the snap
         box = snap.configuration.box
+        print(box)
+        # sys.exit()
         if (self.dim == 2):
             self.box_dim = np.array([box[0], box[1]])
         elif (self.dim == 3):
@@ -277,183 +279,14 @@ class SimInfo:
             periodic.append(1)
 
         #set the interaction range as the longest bond dist in the simulation
-        R = sim.largest_bond_distance
+        R = self.largest_bond_distance
+        R = 3
 
         #construct the neighborgrid
         self.ngrid = ng.Neighborgrid(lims, R, periodic)
 
         return
 
-
-
-
-
-####################################################################
-################# Determine Bond Network ###########################
-####################################################################
-
-def check_particle_pairs(particles1, particles2, cutoff, sim, bond_dict):
-    #check if any of the particle1's are within cutoff of particle2's
-
-    #do pairwise comparisons between each particle
-    for particle1 in particles1:
-        for particle2 in particles2:
-
-            #check if particles are within cutoff. If so, create a bond between bodies
-            if (particle1.is_bonded(particle2, cutoff, sim.box_dim)):
-                particle1.bind(particle2, bond_dict)
-                return True
-
-    #if none of the particles have a bond, return False
-    return False
-
-
-
-def check_body_pair(body1, body2, sim, bond_dict):
-    ''' Check if the pair of bodies contains particles that are within the cutoff of a 
-        given bond type. If one is found, we assume the bodies are bonded and stop 
-        checking for further bonds
-    '''
-
-    #loop over each bond type 
-    for bond in sim.bonds:
-
-        #get the two particle types involved in this bond
-        type1, type2 = bond.get_types()
-        cutoff       = bond.get_cutoff()
-
-        #first get all type 1 on body 1 and type 2 on body 2
-        particles1 = body1.get_particles_by_type(type1)
-        particles2 = body2.get_particles_by_type(type2)
-
-        #do pairwise comparisons between each particle
-        found_bond = check_particle_pairs(particles1, particles2, cutoff, bond_dict)
-        if (found_bond):
-            return
-
-        #if two particles types are the same, we are done with this bond type
-        if type1 == type2:
-            continue
-
-        #if the two particles types are different, the reverse check must be performed
-        particles1 = body1.get_particles_by_type(type2)
-        particles2 = body2.get_particles_by_type(type1)
-
-        #do pairwise comparisons between each particle
-        found_bond = check_particle_pairs(particles1, particles2, cutoff, bond_dict)
-        if (found_bond):
-            return
-
-    return
-
-
-
-
-def get_bonded_bodies(bodies, sim, bond_dict):
-    #determine bonded bodies by looping over each neighborhood, bond type, and particle
-
-    #extract and update the neighborgrid using the current bodies info
-    ngrid = sim.ngrid
-    ngrid.update(bodies)
-
-    #loop over each body
-    for current_body in bodies:
-
-        #get all the nearby bodies from the neighborgrid
-        nearby_bodies = ngrid.getNeighborhood(current_body)
-
-        #loop over nearby bodies, checking for formation of each bond type
-        for target_body in nearby_bodies:
-
-            #check that these bodies are not already bonded. if so, go to next
-            if (current_body.is_bonded(target_body)):
-                continue
-
-            #check if the two bodies contain bonded particles and update accordingly
-            check_body_pair(current_body, target_body, sim, bond_dict)
-
-    return
-
-            
-
-
-def get_bonded_subunits(p1_coords, p1_bods, p2_coords, p2_bods, bond_dict, box_dim, cutoff):
-    #get the subunit indices that have bonds between the two particle sets
-
-    #todo - skip this if no nanoparticle
-
-    #add all the relevant bodies to the bond_dict as keys
-    for body in p1_bods:
-        if body not in bond_dict:
-            bond_dict[body] = []
-
-    for body in p2_bods:
-        if body not in bond_dict:
-            bond_dict[body] = []
-   
-
-    #loop over the coordinates for particle1, comparing to all particle2's
-    for i in range(len(p1_coords)):
-
-        #get the i-th particle1, and i+1 to end particle2's
-        base_coord = p1_coords[i]
-        compare_coords = p2_coords
-
-        #compute pairwise distances and compare to cutoff to get interacting pairs
-        dists = distance(base_coord, compare_coords, box_dim)
-        interacting = np.where(dists < cutoff)[0]
-
-        #add all bonded pairs to the dictionary
-        for sub_id in interacting:
-
-            #do not allow self interactions
-            if p2_bods[sub_id] != p1_bods[i]:
-
-                #do not allow repeats in the list of bonded particles
-                if p2_bods[sub_id] not in bond_dict[p1_bods[i]]:
-                    bond_dict[p1_bods[i]].append(p2_bods[sub_id])
-                if p1_bods[i] not in bond_dict[p2_bods[sub_id]]:
-                    bond_dict[p2_bods[sub_id]].append(p1_bods[i])
-
-
-    return
-        
-
-def get_type_coords(particle_info, particle_type, box_dim, radius = None, center = None):
-    #get the list of coordinates for all particles of the given type
-
-    #get the list of all particle info for that type
-    particle_list = particle_info.loc[(particle_info['type'] == particle_type)]
-
-    #extract the coordinates from this list of data
-    p_coords = np.array([np.array(particle_list['position_x'].values), 
-                         np.array(particle_list['position_y'].values), 
-                         np.array(particle_list['position_z'].values)]).T
-
-    bodies = np.array(particle_list['body'])
-
-    #if a cutoff sphere is given, exclude particles outside this sphere
-    if (radius and center.any()):
-        distance_mask = np.where(distance(p_coords, center, box_dim) < radius)
-        p_coords = p_coords[distance_mask]
-        bodies   = bodies[distance_mask]
-
-    #return the coordinates and body id
-    return p_coords, bodies
-
-
-def get_p_q_bonds(particle_info, type_p, type_q, bond_dict, box_dim, cutoff,
-                  radius = None, center = None):
-    #determine all pairs of particles of type p and q that are bonded
-
-    #get the coordinates for these particle types
-    p_coords, p_bods = get_type_coords(particle_info, type_p, box_dim, radius, center)
-    q_coords, q_bods = get_type_coords(particle_info, type_q, box_dim, radius, center)
-
-    #use coordinates to determine which bodies have an interacting pair
-    get_bonded_subunits(p_coords, p_bods, q_coords, q_bods, bond_dict, box_dim, cutoff)
-
-    return
 
 ####################################################################
 ################# Bond Network -> Graph & Clustering ###############
@@ -578,23 +411,9 @@ def analyze_structures(snap, sim, radius = None, center = None):
         bond_dict[bod.get_id()] = []
 
     #determine the bond network using the list of bodies
-
-
-
-    #get all pairs of interacting particle types that are bonded. log the pairwise body
-    #bond matrix in the bond_dict
-    for bond_type in sim.bonds:
-
-        #get the types and cutoff distance for that pair
-        type_p = bond_type[0]
-        type_q = bond_type[1]
-        pq_cutoff = bond_type[2] * sim.cutoff_mult
-
-        #update the bond_dict with bodies interacting through these types
-        get_p_q_bonds(particle_info, type_p, type_q, bond_dict, sim.box_dim, pq_cutoff,
-                      radius, center)
-
-
+    body.get_bonded_bodies(bodies, sim, bond_dict)
+    print(bond_dict)
+    sys.exit()
 
     #determine groups of bonded structures
     G, bond_dict = get_groups(bond_dict)
@@ -649,7 +468,7 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
         fout = open("analysis_out.dat", 'w') 
 
     #loop over each frame and perform the analysis
-    for frame in range(0, frames, jump):
+    for frame in range(400, frames, jump):
 
         #get the snapshot for the current frame
         snap = snaps.read_frame(frame)
@@ -660,6 +479,7 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
             nanoparticles = body.get_nanoparticles(snap, sim)
 
         #analyze the structures based on nanoparticle presence
+        sim.nano_flag = False
         if (not sim.nano_flag):
 
             q = analyze_structures(snap, sim)

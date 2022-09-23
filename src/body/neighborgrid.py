@@ -11,6 +11,7 @@ Code modified from a 2D version created by Daniel Goldstein.
 
 import numpy as np
 from itertools import permutations
+import sys
 
 
 class Neighborgrid:
@@ -36,7 +37,7 @@ class Neighborgrid:
         #of each box is at least R/2 then we will only need to check the
         #9 boxes around each particle
 
-        self.numD     = np.zeros(self.dim, dtype=int)
+        self.numD    = np.zeros(self.dim, dtype=int)
         self.boxSize = np.zeros(self.dim, dtype=float)
 
         for i in range(self.dim):
@@ -73,9 +74,11 @@ class Neighborgrid:
         index = []
         for i in range(self.dim):
 
-            box_num = np.floor(position[i] / self.boxSize[i])
+            box_num = np.floor((position[i]+self.lim[i][1]) / self.boxSize[i])
             index.append(int(box_num))
 
+        # print(position, index)
+        # sys.exit()
         return tuple(index)
 
 
@@ -94,6 +97,7 @@ class Neighborgrid:
         it and return all that are within the interaction radius'''
 
         centerBox = self.convertPosToIndex(body)  
+        body_list = []
 
         for box in self.AdjacentBoxes(centerBox):
             if box in self.map:
@@ -109,12 +113,17 @@ class Neighborgrid:
 
         #get all possible grid shifts within range
         indexAdjustment = permutations([-2,-1,0,1,2], self.dim)
+        print("All adjust")
+        print(list(indexAdjustment))
 
-        # add the adjustment to the center box and then wrap boundaries    
+        # add the adjustment to the center box and then wrap boundaries  
+        print("Center ", centerBox)
+        print("Neighbors")
         for boxAdjustment in indexAdjustment:
             neighborBox = [0]*self.dim
             for i in range(self.dim):
                 neighborBox[i] = (centerBox[i]+boxAdjustment[i]) % self.numD[i]
+            print(neighborBox)
 
             yield tuple(neighborBox)
 
