@@ -44,17 +44,17 @@ def testNeighborGrid():
 		for j in range(10):
 
 				b = body.Body(np.array([[1,1]]),[1],1)
-				b.set_position((i,j))
+				b.set_position(np.array([i,j]))
 				bodies.append(b)
 
 	#update the neighbor list with these bodies
 	ng.update(bodies)
-	test_body = bodies[34]
+	test_body = bodies[0]
 	# print("Test body located at {}".format(test_body.get_position()))
 	# for entry in ng.getNeighborhood(test_body):
 	# 	print("Neighbor found at {}".format(entry.get_position()))
 
-	assert(len(list(ng.getNeighborhood(test_body))) == 6)
+	assert(len(list(ng.getNeighborhood(test_body))) == 8)
 
 	return
 

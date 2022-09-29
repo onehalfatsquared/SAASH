@@ -289,21 +289,6 @@ def get_particle_info(snap):
     return pd.DataFrame(particle_info)
 
 
-def get_nano_centers_old(particle_info, particle_type):
-    #get the list of coordinates for all nanoparticle centers
-
-    #get the list of all particle info for that type
-    center_list = particle_info.loc[(particle_info['type'] == particle_type)]
-
-    #extract the coordinates from this list of data
-    c_coords = np.array([np.array(center_list['position_x'].values), 
-                         np.array(center_list['position_y'].values), 
-                         np.array(center_list['position_z'].values)]).T
-
-    #return the coordinates
-    return c_coords
-
-
 def get_nano_centers(snap, sim, particle_type):
     #get the coordinates for the center of each nanoparticle of the specified type
 

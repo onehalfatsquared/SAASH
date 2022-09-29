@@ -16,8 +16,7 @@ import sys
 
 class Neighborgrid:
     '''This class implements a neighborlist to faciliate the fast
-    finding of nearby partilces. This implementation is for a 2D
-    neighbor grid'''
+    finding of nearby particles. '''
 
     def __init__(self, lim, R, periodic):
         
@@ -44,7 +43,14 @@ class Neighborgrid:
             self.numD[i]    = np.floor((self.lim[i][1] - self.lim[i][0]) / (R/2))
             self.boxSize[i] = (self.lim[i][1] - self.lim[i][0]) / self.numD[i]
         
+        #init a dict to store grid cell to particle mapping
         self.map = {}
+
+        #if the domain boundaries aren't of the form [0,L], define a shift to make it so
+        self.shift = []
+        for i in range(self.dim):
+            self.shift.append(-lim[i][0])
+
 
     def update(self, bodies):
         '''The update function takes in a list of bodies (objects with a position) and will
@@ -57,7 +63,6 @@ class Neighborgrid:
         for body in bodies:
             self.addItemToMap(self.convertPosToIndex(body), body)
             
-
 
     def convertPosToIndex(self, body):
 
@@ -74,7 +79,7 @@ class Neighborgrid:
         index = []
         for i in range(self.dim):
 
-            box_num = np.floor((position[i]+self.lim[i][1]) / self.boxSize[i])
+            box_num = np.floor((position[i]+self.shift[i]) / self.boxSize[i])
             index.append(int(box_num))
 
         return tuple(index)
