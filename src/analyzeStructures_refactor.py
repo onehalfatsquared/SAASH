@@ -88,8 +88,6 @@ class SimInfo:
 
         #set the box dimension from the snap
         box = snap.configuration.box
-        print(box)
-        # sys.exit()
         if (self.dim == 2):
             self.box_dim = np.array([box[0], box[1]])
         elif (self.dim == 3):
@@ -280,7 +278,7 @@ class SimInfo:
 
         #set the interaction range as the longest bond dist in the simulation
         R = self.largest_bond_distance
-        R = 3
+        R = 2
 
         #construct the neighborgrid
         self.ngrid = ng.Neighborgrid(lims, R, periodic)
@@ -413,6 +411,10 @@ def analyze_structures(snap, sim, radius = None, center = None):
     #determine the bond network using the list of bodies
     body.get_bonded_bodies(bodies, sim, bond_dict)
     print(bond_dict)
+    bonds = 0
+    for key in bond_dict.keys():
+        bonds += len(bond_dict[key])
+    print("Bonds ", bonds/2)
     sys.exit()
 
     #determine groups of bonded structures
@@ -468,7 +470,7 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
         fout = open("analysis_out.dat", 'w') 
 
     #loop over each frame and perform the analysis
-    for frame in range(400, frames, jump):
+    for frame in range(1234, frames, jump):
 
         #get the snapshot for the current frame
         snap = snaps.read_frame(frame)

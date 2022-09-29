@@ -101,15 +101,6 @@ def testBodyBind():
 
 
 
-#Todo - write a test to check if body A binds to body B, if the reverse check works correctly
-
-
-
-
-
-
-
-
 
 
 

@@ -54,12 +54,23 @@ def get_particles(snap):
     return pd.DataFrame(particle_info)
 
 
+def test_distance():
+    #test if periodic BC works as intended for distance function
+
+    box = np.array([5,5])
+
+    x1 = np.array([4,2])
+    x2 = np.array([1,2])
+
+    print(distance(x1,x2,box))
+
+    return
 
 
-def get_ex_particle_info(frame):
+def get_ex_particle_info(gsd_file, ixn_file, frame):
 
     #open file
-    snaps = gsd.hoomd.open(name="../diamonds_T3/sd1296.gsd", mode="rb")
+    snaps = gsd.hoomd.open(name=gsd_file, mode="rb")
     snap = snaps.read_frame(0)
     frames = len(snaps)
     print(frames)
@@ -73,15 +84,22 @@ def get_ex_particle_info(frame):
     snap = snaps.read_frame(frame)
 
     #do tests on extracting types and grabbing fields corresponding to given types
-    # print(snap.particles.typeid)
-    # mask = [i for i,x in enumerate(snap.particles.typeid) if x in sim.interacting_types_mapped]
-    # print(snap.particles.position[mask])
-    # print(snap.particles.body[mask])
+    print(snap.particles.typeid)
+    print(snap.particles.types)
+    mask = [i for i,x in enumerate(snap.particles.typeid) if x in sim.interacting_types_mapped]
+    print(snap.particles.position[mask])
+    print(snap.particles.body[mask])
+
+
+    sub_mask = [i for i,x in enumerate(snap.particles.body) if x == 11]
+    print(snap.particles.typeid[sub_mask])
 
     #test creating bodies from the snap
     bodies = body.create_bodies(snap, sim)
-    print(bodies[1199].get_particles()[2].get_type())
-    print(bodies[1199].get_particles_by_type("A5A"))
+    print(bodies[-1].get_particles()[1].get_type())
+    print(bodies[-1].get_particles_by_type("A5A"))
+
+    return
 
 
 
@@ -108,6 +126,6 @@ if __name__ == "__main__":
 
 
 
-    # get_ex_particle_info(500)
-
+    # get_ex_particle_info(gsd_file, ixn_file, 500)
+    # test_distance()
     test.run_analysis(gsd_file, ixn_file = ixn_file)

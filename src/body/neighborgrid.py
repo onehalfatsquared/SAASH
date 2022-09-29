@@ -10,7 +10,7 @@ Code modified from a 2D version created by Daniel Goldstein.
 
 
 import numpy as np
-from itertools import permutations
+from itertools import product
 import sys
 
 
@@ -77,8 +77,6 @@ class Neighborgrid:
             box_num = np.floor((position[i]+self.lim[i][1]) / self.boxSize[i])
             index.append(int(box_num))
 
-        # print(position, index)
-        # sys.exit()
         return tuple(index)
 
 
@@ -105,26 +103,31 @@ class Neighborgrid:
                    for body_j in self.map[box]:
                         '''was previously a distance check here, but interactions are not
                            at the body level, so I removed it for purposes of gridding'''
-                        yield body_j
+
+                        #check that body_j is not the original body. if not, append body_j
+                        if body != body_j:
+                            body_list.append(body_j)
+
+        return body_list
                
        
     def AdjacentBoxes(self, centerBox):
         ''' determine all adjacent boxes to the center'''
 
+        #init list of all neighbor indices
+        neighbor_list = []
+
         #get all possible grid shifts within range
-        indexAdjustment = permutations([-2,-1,0,1,2], self.dim)
-        print("All adjust")
-        print(list(indexAdjustment))
+        indexAdjustment = product([-2,-1,0,1,2], [-2,-1,0,1,2])
 
         # add the adjustment to the center box and then wrap boundaries  
-        print("Center ", centerBox)
-        print("Neighbors")
         for boxAdjustment in indexAdjustment:
             neighborBox = [0]*self.dim
             for i in range(self.dim):
                 neighborBox[i] = (centerBox[i]+boxAdjustment[i]) % self.numD[i]
-            print(neighborBox)
 
-            yield tuple(neighborBox)
+            neighbor_list.append(tuple(neighborBox))
+
+        return neighbor_list
 
 

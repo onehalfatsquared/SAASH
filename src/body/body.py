@@ -94,9 +94,6 @@ class Particle:
 
         #get the periodic distance between the particles
         particle_distance = distance(self.__position, particle.get_position(), box)
-        print(self.__position)
-        print(particle.get_position())
-        print(particle_distance)
 
         #compare to given cutoff
         if (particle_distance < cutoff):
@@ -169,8 +166,10 @@ class Body:
         #init a list to store bonds - bodies in this list are bound
         self.__bond_list = []
 
-        #init a center of mass variable for the body
-        center_mass = particle_pos[0] * 0
+        #init a size, type, and position for the body
+        self.__position  = particle_pos[0] * 0
+        self.__body_type = ""
+        self.__size      = 0
 
         #init an array for particle objects. 
         self.__num_particles = len(particle_pos)
@@ -194,12 +193,8 @@ class Body:
                 self.__particle_type_map[particle_type[i]] = []
                 self.__particle_type_map[particle_type[i]].append(i)
 
-            #update the center of mass
-            center_mass += particle_pos[i]
 
-        #divide center of mass by num particles and set it
-        self.__position = center_mass / self.__num_particles
-
+    #bonding related function
 
     def is_bonded(self, body):
         #determine if the host body is already bonded to the given one
@@ -221,6 +216,12 @@ class Body:
 
         self.__position = position
 
+    def set_type(self, body_type):
+        #manually set the type for the body
+
+        self.__body_type = body_type
+
+
     #getter functions
 
     def get_position(self):
@@ -230,6 +231,10 @@ class Body:
     def get_id(self):
 
         return self.__body_index
+
+    def get_type(self):
+
+        return self.__body_type
 
     def get_num_particles(self):
 
@@ -359,6 +364,7 @@ def check_particle_pairs(particles1, particles2, cutoff, sim, bond_dict):
             if (particle1.is_bonded(particle2, cutoff, sim.box_dim)):
                 particle1.bind(particle2, bond_dict)
                 print("binding {} with {}".format(particle1.get_type(), particle2.get_type()))
+                print(particle1.get_position(), particle2.get_position())
                 # sys.exit()
                 return True
 
@@ -379,8 +385,6 @@ def check_body_pair(body1, body2, sim, bond_dict):
         #get the two particle types involved in this bond
         type1, type2 = bond.get_types()
         cutoff       = bond.get_cutoff()
-
-        print(type1, type2, cutoff)
 
         #first get all type 1 on body 1 and type 2 on body 2
         particles1 = body1.get_particles_by_type(type1)
@@ -415,13 +419,19 @@ def get_bonded_bodies(bodies, sim, bond_dict):
     ngrid.update(bodies)
 
     #loop over each body
+    body = 0
     for current_body in bodies:
 
         #get all the nearby bodies from the neighborgrid
         nearby_bodies = ngrid.getNeighborhood(current_body)
 
+        print("Current: ", body, current_body.get_position())
+        body += 1
+
         #loop over nearby bodies, checking for formation of each bond type
         for target_body in nearby_bodies:
+
+            print(target_body.get_position())
 
             #check that these bodies are not already bonded. if so, go to next
             if (current_body.is_bonded(target_body)):
@@ -433,12 +443,30 @@ def get_bonded_bodies(bodies, sim, bond_dict):
     return
 
 
+def get_body_center_dict(snap, unique_bods):
+    #for each body we consider, get the name of its center particle and its position
+    #return the info as a dictionary
 
-def create_bodies(snap, sim):
-    #create an array of all bodies containing particles relevant to the assembly process
+    #init a dict to store the info since the bodies are in a set
+    body_info_dict = dict()
 
-    #init a list to store the bodies
-    bodies = []
+    for body_id in unique_bods:
+
+        #get the mask for the body in question
+        mask = [i for i,x in enumerate(snap.particles.body) if x == body_id]
+
+        #extract the first values from the types and positions arrays
+        pos    = snap.particles.position[mask][0]
+        p_type = snap.particles.types[snap.particles.typeid[mask][0]]
+
+        #append this info to the dictionary
+        body_info_dict[body_id] = [pos, p_type]
+
+    return body_info_dict
+
+
+def filter_bodies(snap, sim):
+    #filter the particle info in the snap to only include bodies involved in interactions
 
     #get the list of relevant particle types - hoomd index
     interacting_types = sim.interacting_types_mapped
@@ -456,22 +484,50 @@ def create_bodies(snap, sim):
     #map the filtered_types from hoomd ints back into text strings for particle creation
     filtered_types = np.array([snap.particles.types[element] for element in filtered_types])
 
-    #create a set of the masked bodies to get the unique ids
+    return filtered_pos, filtered_bod, filtered_types
+
+
+def create_body(filtered_pos, filtered_bod, filtered_types, body_info_dict, body_id, body_index):
+    #extract the data for the given body_id and create and return the body
+
+    #create a sub-mask to get only particles part of the current body
+    sub_mask = [i for i,x in enumerate(filtered_bod) if x == body_id]
+
+    #get the positions and types or particles at the indices set by this submask
+    particle_positions = filtered_pos[sub_mask]
+    particle_types     = filtered_types[sub_mask]
+
+    #create the body, set its position and type from the dict, append it to the list
+    current_body = Body(particle_positions, particle_types, body_index)
+    current_body.set_position(body_info_dict[body_id][0])
+    current_body.set_type(body_info_dict[body_id][1])
+
+    return current_body
+
+
+def create_bodies(snap, sim):
+    #create an array of all bodies containing particles relevant to the assembly process
+
+    #init a list to store the bodies
+    bodies = []
+
+    #filter out particle data from snap to only include the bodies relevant to assembly
+    filtered_pos, filtered_bod, filtered_types = filter_bodies(snap, sim)
+
+    #create a set of the filtered bodies to get the unique ids
     unique_bods = set(filtered_bod)
+
+    #for each unique body, get its particle type and center of mass in a dictionary
+    body_info_dict = get_body_center_dict(snap, unique_bods)
 
     #loop over the masked bodies, creating a Body object with the relevant particles
     body_index = 0    #init a counter so body indexing starts at 0
     for body_id in unique_bods:
 
-        #create a sub-mask to get only particles part of the current body
-        sub_mask = [i for i,x in enumerate(filtered_bod) if x == body_id]
+        #create a body for the given id and add it to the list
+        current_body = create_body(filtered_pos, filtered_bod, filtered_types, 
+                                   body_info_dict, body_id, body_index)
 
-        #get the positions and types or particles at the indices set by this submask
-        particle_positions = filtered_pos[sub_mask]
-        particle_types     = filtered_types[sub_mask]
-
-        #create the body, append it to the list
-        current_body = Body(particle_positions, particle_types, body_index)
         bodies.append(current_body)
 
         #increment body counter
