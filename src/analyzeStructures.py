@@ -458,6 +458,12 @@ def analyze_structures(particle_info, sim, radius = None, center = None):
     #determine groups of bonded structures
     G, bond_dict = get_groups(bond_dict)
 
+    bonds = 0
+    for key in bond_dict.keys():
+        bonds += len(bond_dict[key])
+    print("Bonds ", bonds/2)
+    return bonds, bonds
+
     #count the sizes of each group
     size_counts, largest_group_size = get_group_sizes(G)
 
@@ -507,7 +513,7 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
         fout = open("analysis_out.dat", 'w') 
 
     #loop over each frame and perform the analysis
-    for frame in range(0, frames, jump):
+    for frame in range(400, frames, jump):
 
         #get the snapshot for the current frame
         snap = snaps.read_frame(frame)
@@ -515,6 +521,7 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
         #get the particle info for the current frame
         particle_info = get_particles(snap)
 
+        sim.nano_flag = False
         #check if there are nanoparticles in the simulation. If so, get locations
         if (sim.nano_flag):
 

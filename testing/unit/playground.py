@@ -25,6 +25,7 @@ import re
 from body import body
 from body import neighborgrid
 import analyzeStructures_refactor as test
+import analyzeStructures as original
 
 
 def distance(x0, x1, dimensions):
@@ -156,7 +157,8 @@ def run_profile():
     # gsd_file = "../patchy_2d/traj.gsd"
     # ixn_file = "../patchy_2d/interactions.txt"
 
-    test.run_analysis(gsd_file, ixn_file = ixn_file)
+    test.run_analysis(gsd_file, ixn_file = ixn_file, jump=50)
+    # original.run_analysis(gsd_file, ixn_file = ixn_file, jump = 50)
 
 
 

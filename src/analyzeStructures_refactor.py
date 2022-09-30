@@ -494,7 +494,7 @@ def analyze_structures(snap, sim, radius = None, center = None):
     for key in bond_dict.keys():
         bonds += len(bond_dict[key])
     print("Bonds ", bonds/2)
-    sys.exit()
+    return bonds, bonds
 
     #determine groups of bonded structures
     G, bond_dict = get_groups(bond_dict)
@@ -574,7 +574,7 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
                     q_i    = analyze_structures(particle_info, sim, r, center) 
                     q.append(q_i) 
 
-        sys.exit()
+        # sys.exit()
 
         #write to file
         if write_output:

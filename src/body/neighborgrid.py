@@ -21,7 +21,7 @@ class Neighborgrid:
     def __init__(self, lim, R, periodic):
         
         #set the bounding box for the simulation
-        self.lim = lim
+        self.lim = np.array(lim)
 
         #set which dimensions are periodic
         self.periodic = periodic
@@ -50,6 +50,7 @@ class Neighborgrid:
         self.shift = []
         for i in range(self.dim):
             self.shift.append(-lim[i][0])
+        self.shift = np.array(self.shift)
 
         #list of all grid cell moves to check for neighbors
         self.indexAdjustment = list(product([-1,0,1], repeat=self.dim))
@@ -73,17 +74,24 @@ class Neighborgrid:
         position = body.get_position()
 
         #check if all coordinates are within the known box size
-        for i in range(self.dim):
 
-            if position[i] < self.lim[i][0] or position[i] > self.lim[i][1]:
-                raise ValueError("Particle is outside the set bounds")
+        #for loop version
+        # for i in range(self.dim):
+        #     if position[i] < self.lim[i][0] or position[i] > self.lim[i][1]:
+        #         raise ValueError("Particle is outside the set bounds")
+
+        #vectorized version - reduces total runtime by about 10%
+        if ( (position < self.lim[:,0]).any() or (position > self.lim[:,1]).any() ):
+            raise ValueError("Particle is outside the set bounds")
 
         #convert to an index - tuple for use as key in map
-        index = []
-        for i in range(self.dim):
+        # index = []
+        # for i in range(self.dim):
+        #     box_num = np.floor((position[i]+self.shift[i]) / self.boxSize[i])
+        #     index.append(int(box_num))
 
-            box_num = np.floor((position[i]+self.shift[i]) / self.boxSize[i])
-            index.append(int(box_num))
+        #vectorized version - reduces function time by factor of 2
+        index = ((position + self.shift) / self.boxSize).astype(int)
 
         return tuple(index)
 
@@ -130,6 +138,8 @@ class Neighborgrid:
 
         # add the adjustment to the center box and then wrap boundaries  
         for boxAdjustment in indexAdjustment:
+
+            #for loop version - note: vectorizing this led to slowdown
             neighborBox = [0]*self.dim
             for i in range(self.dim):
                 neighborBox[i] = (centerBox[i]+boxAdjustment[i]) % self.numD[i]
