@@ -33,14 +33,14 @@ class Neighborgrid:
         self.dim = len(self.lim)
         
         #break up the space of the simulation into a grid were the size
-        #of each box is at least R/2 then we will only need to check the
-        #9 boxes around each particle
+        #of each box is at least R then we will only need to check the
+        #8 boxes around each particle
 
         self.numD    = np.zeros(self.dim, dtype=int)
         self.boxSize = np.zeros(self.dim, dtype=float)
 
         for i in range(self.dim):
-            self.numD[i]    = np.floor((self.lim[i][1] - self.lim[i][0]) / (R/2))
+            self.numD[i]    = np.floor((self.lim[i][1] - self.lim[i][0]) / (self.R))
             self.boxSize[i] = (self.lim[i][1] - self.lim[i][0]) / self.numD[i]
         
         #init a dict to store grid cell to particle mapping
@@ -51,7 +51,8 @@ class Neighborgrid:
         for i in range(self.dim):
             self.shift.append(-lim[i][0])
 
-        self.indexAdjustment = list(product([-2,-1,0,1,2], repeat=self.dim))
+        #list of all grid cell moves to check for neighbors
+        self.indexAdjustment = list(product([-1,0,1], repeat=self.dim))
 
 
     def update(self, bodies):

@@ -149,8 +149,8 @@ def run_profile():
     ixn_file = "../diamonds_T3/diamond_ixn.txt"
 
     #t3 triangle test
-    gsd_file = "../triangles_T3/nano_test.gsd"
-    ixn_file = "../triangles_T3/interactionsT3.txt"
+    # gsd_file = "../triangles_T3/nano_test.gsd"
+    # ixn_file = "../triangles_T3/interactionsT3.txt"
 
     #patchy 2d test
     # gsd_file = "../patchy_2d/traj.gsd"

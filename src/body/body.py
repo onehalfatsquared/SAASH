@@ -296,7 +296,7 @@ def get_nano_centers(snap, sim, particle_type):
     hoomd_nano_type = sim.type_map[particle_type]
 
     #create a mask to get indices for all nanoparticles of the given type
-    mask = [i for i,x in enumerate(snap.particles.typeid) if x == hoomd_nano_type]
+    mask = np.where(snap.particles.typeid == hoomd_nano_type)[0]
     filtered_pos   = snap.particles.position[mask]
 
     #check if problem is 2d or 3d. Cut out z component if 2d
@@ -321,7 +321,6 @@ def get_nanoparticles(snap, sim):
         nano_rad  = sim.nanos[i].get_radius()
 
         #get the coordinates of all nanoparticles of this type
-        # nano_coords = get_nano_centers(particle_info, hoomd_nano_type)
         nano_coords = get_nano_centers(snap, sim, nano_type)
 
         #for each, construct a nanoparticle object and append it to an array
@@ -460,7 +459,6 @@ def filter_bodies(snap, sim):
     interacting_types = sim.interacting_types_mapped
 
     #create a mask for accessing particle position data, get positions+body of these types
-    # mask = [i for i,x in enumerate(snap.particles.typeid) if x in interacting_types]
     mask = np.where(np.isin(snap.particles.typeid, interacting_types))[0]
     filtered_pos   = snap.particles.position[mask]
     filtered_bod   = snap.particles.body[mask]
@@ -480,7 +478,6 @@ def create_body(filtered_pos, filtered_bod, filtered_types, body_info_dict, body
     #extract the data for the given body_id and create and return the body
 
     #create a sub-mask to get only particles part of the current body
-    # sub_mask = [i for i,x in enumerate(filtered_bod) if x == body_id]
     sub_mask = np.where(filtered_bod == body_id)[0]
 
     #get the positions and types or particles at the indices set by this submask

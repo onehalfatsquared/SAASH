@@ -324,7 +324,7 @@ class SimInfo:
             if (body_id < 0):
                 continue
 
-            mask         = [idx for idx,x in enumerate(snap.particles.body) if x == body_id]
+            mask         = np.where(snap.particles.body == body_id)[0]
             masked_types = snap.particles.typeid[mask]
             if len(masked_types) == 0:
                 continue
@@ -606,22 +606,6 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
 
 if __name__ == "__main__":
 
-    #various trajectory types to test on
-
-    # gsd_file = "test_r473_success.gsd"
-    # ixn_file = "../interactionsT3.txt"
-
-    # gsd_file = "../../T3_diamonds/DBOND-5.0_DIMERS-160_NBOND-0.6_2/sd1296.gsd"
-    # gsd_file = "/home/anthony/storage/Brandeis/T3_diamonds/naren_test/sd1296.gsd"
-    # ixn_file = "../diamond_ixn.txt"
-
-    # gsd_file = "/home/anthony/storage/Brandeis/T3_full/data/e11_8_e23_11_C_1e-4_SEED_1/T3_triangles.gsd"
-    # ixn_file = "../interactionsT3.txt"
-
-    # TODO - test on Narens T1 system. Not sure if it is working here for some reason
-
-    # run_analysis(gsd_file, ixn_file, verbose=True, write_output = True)
-
     #get the name command line arguments - will update to parser in future
     try:
         gsd_file = sys.argv[1]
@@ -632,5 +616,5 @@ if __name__ == "__main__":
         raise
 
     #run analysis
-    run_analysis(gsd_file, jump = jump, ixn_file = ixn_file, verbose = True, write_output = True)
+    run_analysis(gsd_file, jump = jump, ixn_file = ixn_file, verbose = True, write_output = False)
 
