@@ -65,8 +65,12 @@ class SimInfo:
 
     def __init__(self, snap, frames, ixn_file = "interactions.txt", cutoff_mult = 1.35, radius_mult = 1.2):
 
+        #print an initialization message
+        print("Initializing SimInfo and Neighborgrid...")
+
         #set the directly given variables
         self.frames = frames
+        print("This simulation output contains {} frames".format(frames))
         self.cutoff_mult = cutoff_mult
         self.radius_mult = radius_mult
 
@@ -103,9 +107,14 @@ class SimInfo:
         self.interacting_types_mapped = []
         self.__construct_map(snap)
 
+        #get the max subunit size
+        self.max_subunit_size = self.__get_max_subunit_size(snap)
+        print("The largest center-to-atom distance is {}".format(self.max_subunit_size))
+
         #construct a neighborgrid using the sim box and info on interaction ranges
         self.ngrid = None
         self.__create_neighbor_grid()
+
 
         #check if the number of particles is zero and throw error
         if (self.num_bodies == 0):
@@ -188,6 +197,7 @@ class SimInfo:
         #compute the largest bond distance in the simulation
         bond_lengths = [bond.get_cutoff() for bond in self.bonds]
         self.largest_bond_distance = np.max(bond_lengths)
+        print("The largest rest bond distance is {}".format(self.largest_bond_distance))
 
         return
 
@@ -276,14 +286,83 @@ class SimInfo:
             #Assume that the simulations are periodic in each dimension
             periodic.append(1)
 
-        #set the interaction range as the longest bond dist in the simulation
-        R = self.largest_bond_distance
-        R = 2
+        #set the interaction range as the longest bond dist or particle size in the sim
+        R = np.maximum(self.largest_bond_distance * self.cutoff_mult, 
+                       self.max_subunit_size * 2 * self.radius_mult)
+        print("The largest center-to-center distance for neighborgrid has been set to", R)
 
         #construct the neighborgrid
         self.ngrid = ng.Neighborgrid(lims, R, periodic)
 
         return
+
+    def __get_max_subunit_size(self, snap):
+        ''' Determine the longest midpoint to pseudoatom distance for the 
+            subunits in the snap. Double this distance can be used as an interaction
+            distance for the neighborgrid, which adapts to a particular systems subunits'''
+
+        #init a list to store the 'radii' of each subunit type
+        max_distance = []
+
+        #init a listto store all center types and an example body_id
+        center_types = []
+        example_bodies = []
+
+        #loop over the first num_bodies entries of particles, which contains the centers
+        for i in range(self.num_bodies):
+
+            #get the type for the centers and log an example body_id
+            new_type = snap.particles.types[snap.particles.typeid[i]]
+            if new_type not in center_types:
+                center_types.append(new_type)
+                example_bodies.append(snap.particles.body[i])
+
+        #grab each body and get the distance to each pseudoatom
+        for body_id in example_bodies:
+
+            #check that this is a rigid body
+            if (body_id < 0):
+                continue
+
+            mask         = [idx for idx,x in enumerate(snap.particles.body) if x == body_id]
+            masked_types = snap.particles.typeid[mask]
+            if len(masked_types) == 0:
+                continue
+
+            center_type  = masked_types[0]
+
+            #get positions for the masked entries
+            masked_pos   = snap.particles.position[mask]
+            center_pos   = masked_pos[0]
+            
+            #check for dimension 2
+            if self.dim == 2:
+                masked_pos = masked_pos[:,0:2]
+                center_pos = center_pos[0:2]
+
+            #further mask to extract only particles involved in bonds
+            sub_mask = [idx for idx,x in enumerate(masked_types) 
+                        if x in self.interacting_types_mapped]
+            double_masked_pos = masked_pos[sub_mask]
+
+            #init variable to keep track of max distance, iterate over particles
+            max_particle_dist = 0
+            for i in range(1,len(double_masked_pos)):
+
+                particle_dist = body.distance(center_pos, double_masked_pos[i], self.box_dim)
+                if (particle_dist > max_particle_dist):
+                    max_particle_dist = particle_dist
+
+            #append the max distance and body type to their arrays
+            max_distance.append(max_particle_dist)
+        
+
+        # get the maximum in max_distance and return it
+        max_dist_overall = np.max(np.array(max_distance))
+
+        return max_dist_overall
+        
+
 
 
 ####################################################################
@@ -410,7 +489,7 @@ def analyze_structures(snap, sim, radius = None, center = None):
 
     #determine the bond network using the list of bodies
     body.get_bonded_bodies(bodies, sim, bond_dict)
-    print(bond_dict)
+    # print(bond_dict)
     bonds = 0
     for key in bond_dict.keys():
         bonds += len(bond_dict[key])
@@ -460,7 +539,6 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
     snaps = gsd.hoomd.open(name=gsd_file, mode="rb")
     snap = snaps.read_frame(0)
     frames = len(snaps)
-    print(frames)
 
     #gather all the relevant global info into a SimInfo object
     sim = SimInfo(snap, frames, ixn_file = ixn_file)
@@ -470,7 +548,7 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
         fout = open("analysis_out.dat", 'w') 
 
     #loop over each frame and perform the analysis
-    for frame in range(1234, frames, jump):
+    for frame in range(400, frames, jump):
 
         #get the snapshot for the current frame
         snap = snaps.read_frame(frame)

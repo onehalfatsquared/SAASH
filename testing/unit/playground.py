@@ -3,6 +3,7 @@
 This is for dong various experiments to help with implemnting features
 
 '''
+import hoomd
 import gsd.hoomd
 import numpy as np
 import matplotlib.pyplot as plt 
@@ -66,6 +67,39 @@ def test_distance():
 
     return
 
+def test_subunit_size(gsd_file, ixn_file, frame):
+    #try to compute a size of a subunit using particle data
+
+    snaps = gsd.hoomd.open(name=gsd_file, mode="rb")
+    snap = snaps.read_frame(frame)
+    box = snap.configuration.box
+    box_dim = np.array(box[0:3])
+    frames = len(snaps)
+    print(frames)
+
+    for i in range(1200):
+        print(i, snap.particles.types[snap.particles.typeid[i]])
+    sys.exit()
+
+    sim = test.SimInfo(snap, frames, ixn_file = ixn_file)
+
+    #filter by body
+    mask = [i for i,x in enumerate(snap.particles.body) if x == 11]
+    pos = snap.particles.position[mask]
+    masked_pos = snap.particles.position[mask]
+    masked_types = snap.particles.typeid[mask]
+    sub_mask = [i for i,x in enumerate(masked_types) if x in sim.interacting_types_mapped]
+    double_masked_pos = masked_pos[sub_mask]
+    double_masked_types = masked_types[sub_mask]
+
+
+    center = pos[0]
+    for i in range(1,len(double_masked_pos)):
+
+        print(i, double_masked_types[i], distance(center, double_masked_pos[i], box_dim))
+
+
+
 
 def get_ex_particle_info(gsd_file, ixn_file, frame):
 
@@ -120,12 +154,13 @@ if __name__ == "__main__":
     ixn_file = "../triangles_T3/interactionsT3.txt"
 
     #patchy 2d test
-    gsd_file = "../patchy_2d/traj.gsd"
-    ixn_file = "../patchy_2d/interactions.txt"
+    # gsd_file = "../patchy_2d/traj.gsd"
+    # ixn_file = "../patchy_2d/interactions.txt"
 
 
 
 
     # get_ex_particle_info(gsd_file, ixn_file, 500)
     # test_distance()
+    # test_subunit_size(gsd_file, ixn_file, 5)
     test.run_analysis(gsd_file, ixn_file = ixn_file)

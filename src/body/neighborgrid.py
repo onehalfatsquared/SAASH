@@ -123,7 +123,7 @@ class Neighborgrid:
         neighbor_list = []
 
         #get all possible grid shifts within range
-        indexAdjustment = product([-2,-1,0,1,2], [-2,-1,0,1,2])
+        indexAdjustment = product([-2,-1,0,1,2], repeat=self.dim)
 
         # add the adjustment to the center box and then wrap boundaries  
         for boxAdjustment in indexAdjustment:

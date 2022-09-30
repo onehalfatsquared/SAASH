@@ -346,11 +346,10 @@ def check_particle_pairs(particles1, particles2, cutoff, sim, bond_dict):
         for particle2 in particles2:
 
             #check if particles are within cutoff. If so, create a bond between bodies
-            if (particle1.is_bonded(particle2, cutoff, sim.box_dim)):
+            if (particle1.is_bonded(particle2, cutoff*sim.cutoff_mult, sim.box_dim)):
                 particle1.bind(particle2, bond_dict)
-                print("binding {} with {}".format(particle1.get_type(), particle2.get_type()))
-                print(particle1.get_position(), particle2.get_position())
-                # sys.exit()
+                # print("binding {} with {}".format(particle1.get_type(), particle2.get_type()))
+                # print(particle1.get_position(), particle2.get_position())
                 return True
 
     #if none of the particles have a bond, return False
@@ -410,13 +409,13 @@ def get_bonded_bodies(bodies, sim, bond_dict):
         #get all the nearby bodies from the neighborgrid
         nearby_bodies = ngrid.getNeighborhood(current_body)
 
-        print("Current: ", body, current_body.get_position())
+        # print("Current: ", body, current_body.get_position())
         body += 1
 
         #loop over nearby bodies, checking for formation of each bond type
         for target_body in nearby_bodies:
 
-            print(target_body.get_position())
+            # print(target_body.get_position())
 
             #check that these bodies are not already bonded. if so, go to next
             if (current_body.is_bonded(target_body)):
@@ -428,23 +427,27 @@ def get_bonded_bodies(bodies, sim, bond_dict):
     return
 
 
-def get_body_center_dict(snap, unique_bods):
+def get_body_center_dict(snap, sim, unique_bods):
     #for each body we consider, get the name of its center particle and its position
     #return the info as a dictionary
 
     #init a dict to store the info since the bodies are in a set
     body_info_dict = dict()
 
-    for body_id in unique_bods:
+    #loop over the first num_bodies + num_nanos elements. These are all centers
+    body_count = sim.num_bodies + sim.num_nanos
+    for i in range(body_count):
 
-        #get the mask for the body in question
-        mask = [i for i,x in enumerate(snap.particles.body) if x == body_id]
+        #get the body id and see if it is in the set we are considering
+        body_id = snap.particles.body[i]
+        if (body_id) not in unique_bods:
+            continue
 
-        #extract the first values from the types and positions arrays
-        pos    = snap.particles.position[mask][0]
-        p_type = snap.particles.types[snap.particles.typeid[mask][0]]
+        #extract position and type of the body
+        pos   = snap.particles.position[i]
+        p_type = snap.particles.types[snap.particles.typeid[i]]
 
-        #append this info to the dictionary
+        # append this info to the dictionary
         body_info_dict[body_id] = [pos, p_type]
 
     return body_info_dict
@@ -503,7 +506,7 @@ def create_bodies(snap, sim):
     unique_bods = set(filtered_bod)
 
     #for each unique body, get its particle type and center of mass in a dictionary
-    body_info_dict = get_body_center_dict(snap, unique_bods)
+    body_info_dict = get_body_center_dict(snap, sim, unique_bods)
 
     #loop over the masked bodies, creating a Body object with the relevant particles
     body_index = 0    #init a counter so body indexing starts at 0
