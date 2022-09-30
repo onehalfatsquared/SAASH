@@ -460,7 +460,8 @@ def filter_bodies(snap, sim):
     interacting_types = sim.interacting_types_mapped
 
     #create a mask for accessing particle position data, get positions+body of these types
-    mask = [i for i,x in enumerate(snap.particles.typeid) if x in interacting_types]
+    # mask = [i for i,x in enumerate(snap.particles.typeid) if x in interacting_types]
+    mask = np.where(np.isin(snap.particles.typeid, interacting_types))[0]
     filtered_pos   = snap.particles.position[mask]
     filtered_bod   = snap.particles.body[mask]
     filtered_types = snap.particles.typeid[mask]
@@ -479,7 +480,8 @@ def create_body(filtered_pos, filtered_bod, filtered_types, body_info_dict, body
     #extract the data for the given body_id and create and return the body
 
     #create a sub-mask to get only particles part of the current body
-    sub_mask = [i for i,x in enumerate(filtered_bod) if x == body_id]
+    # sub_mask = [i for i,x in enumerate(filtered_bod) if x == body_id]
+    sub_mask = np.where(filtered_bod == body_id)[0]
 
     #get the positions and types or particles at the indices set by this submask
     particle_positions = filtered_pos[sub_mask]

@@ -22,6 +22,8 @@ from body import neighborgrid
 import analyzeStructures_refactor as test
 
 
+
+
 def get_ex_particle_info(gsd_file, frame):
 
     snaps = gsd.hoomd.open(name=gsd_file, mode="rb")

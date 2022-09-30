@@ -18,6 +18,10 @@ import pytest
 import sys
 sys.path.insert(0, '../../src')
 
+#import profiling tools
+import cProfile, pstats
+import re
+
 from body import body
 from body import neighborgrid
 import analyzeStructures_refactor as test
@@ -138,8 +142,21 @@ def get_ex_particle_info(gsd_file, ixn_file, frame):
 
 
 
+def run_profile():
 
+    #dimaond test
+    gsd_file = "../diamonds_T3/sd1296.gsd"
+    ixn_file = "../diamonds_T3/diamond_ixn.txt"
 
+    #t3 triangle test
+    gsd_file = "../triangles_T3/nano_test.gsd"
+    ixn_file = "../triangles_T3/interactionsT3.txt"
+
+    #patchy 2d test
+    # gsd_file = "../patchy_2d/traj.gsd"
+    # ixn_file = "../patchy_2d/interactions.txt"
+
+    test.run_analysis(gsd_file, ixn_file = ixn_file)
 
 
 
@@ -163,4 +180,8 @@ if __name__ == "__main__":
     # get_ex_particle_info(gsd_file, ixn_file, 500)
     # test_distance()
     # test_subunit_size(gsd_file, ixn_file, 5)
-    test.run_analysis(gsd_file, ixn_file = ixn_file)
+    # test.run_analysis(gsd_file, ixn_file = ixn_file)
+
+    cProfile.run('run_profile()', 'restats')
+    p = pstats.Stats('restats')
+    p.strip_dirs().sort_stats('tottime').print_stats(15)

@@ -51,6 +51,8 @@ class Neighborgrid:
         for i in range(self.dim):
             self.shift.append(-lim[i][0])
 
+        self.indexAdjustment = list(product([-2,-1,0,1,2], repeat=self.dim))
+
 
     def update(self, bodies):
         '''The update function takes in a list of bodies (objects with a position) and will
@@ -123,7 +125,7 @@ class Neighborgrid:
         neighbor_list = []
 
         #get all possible grid shifts within range
-        indexAdjustment = product([-2,-1,0,1,2], repeat=self.dim)
+        indexAdjustment = self.indexAdjustment
 
         # add the adjustment to the center box and then wrap boundaries  
         for boxAdjustment in indexAdjustment:
