@@ -173,8 +173,8 @@ if __name__ == "__main__":
     ixn_file = "../triangles_T3/interactionsT3.txt"
 
     #patchy 2d test
-    # gsd_file = "../patchy_2d/traj.gsd"
-    # ixn_file = "../patchy_2d/interactions.txt"
+    gsd_file = "../patchy_2d/traj.gsd"
+    ixn_file = "../patchy_2d/interactions.txt"
 
 
 
@@ -182,8 +182,8 @@ if __name__ == "__main__":
     # get_ex_particle_info(gsd_file, ixn_file, 500)
     # test_distance()
     # test_subunit_size(gsd_file, ixn_file, 5)
-    # test.run_analysis(gsd_file, ixn_file = ixn_file)
+    test.run_analysis(gsd_file, ixn_file = ixn_file)
 
-    cProfile.run('run_profile()', 'restats')
-    p = pstats.Stats('restats')
-    p.strip_dirs().sort_stats('tottime').print_stats(15)
+    # cProfile.run('run_profile()', 'restats')
+    # p = pstats.Stats('restats')
+    # p.strip_dirs().sort_stats('tottime').print_stats(15)

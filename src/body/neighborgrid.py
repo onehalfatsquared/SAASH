@@ -71,7 +71,7 @@ class Neighborgrid:
     def convertPosToIndex(self, body):
 
         #grab the position of the body (2 or 3 dim)
-        position = body.get_position()
+        position = body.get_position()[0:self.dim]
 
         #check if all coordinates are within the known box size
 
