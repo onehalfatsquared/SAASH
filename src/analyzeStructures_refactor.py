@@ -394,12 +394,14 @@ def analyze_structures(snap, sim, radius = None, center = None):
     # return bonds, bonds
 
     #determine groups of bonded structures
-    G, bond_dict = cluster.get_groups(bond_dict)
+    G = cluster.get_groups(bond_dict)
     print(G)
-    sys.exit()
 
     #count the sizes of each group
-    size_counts, largest_group_size = get_group_sizes(G)
+    size_counts, largest_group_size = cluster.get_group_sizes(G)
+    print(size_counts)
+    print(largest_group_size)
+    sys.exit()
 
     #if nanoparticle present, compute (num_adsorbed, largestClusterSize, largestClusterBonds)
     if (radius and center.any()):
