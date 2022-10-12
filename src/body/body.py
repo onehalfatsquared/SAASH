@@ -133,9 +133,6 @@ class Particle:
                 bond_dict[target_body_id].append(host_body_id)
 
 
-
-
-
     #getter functions 
 
     def get_position(self):
@@ -162,6 +159,10 @@ class Body:
 
         #set the body index - corresponds to placement in the array of bodies
         self.__body_index = body_index
+
+        #set a cluster index, init to -1
+        self.__cluster       = None
+        self.__cluster_index = -1
 
         #init a list to store bonds - bodies in this list are bound
         self.__bond_list = []
@@ -221,6 +222,11 @@ class Body:
 
         self.__body_type = body_type
 
+    def set_cluster_id(self, cluster, c_id):
+
+        self.__cluster = cluster
+        self.__cluster_index = c_id
+
 
     #getter functions
 
@@ -231,6 +237,14 @@ class Body:
     def get_id(self):
 
         return self.__body_index
+
+    def get_cluster(self):
+
+        return self.__cluster
+
+    def get_cluster_id(self):
+
+        return self.__cluster_index
 
     def get_type(self):
 

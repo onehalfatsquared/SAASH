@@ -30,14 +30,41 @@ from body import body as body
 
 class Cluster:
 
-    def __init__(self, bodies):
+    def __init__(self, bodies, frame):
 
         #create a reference to the list of bodies comprising the cluster
         self.__bodies = bodies
 
+        #init a cluster id to -1
+        self.__cluster_index = -1
+
+        #set a last updated value
+        self.__last_updated = frame
 
 
+    def update(self, cluster):
+        #update a cluster with up to date member bodies
 
+        self.__bodies = cluster.get_bodies()
+        self.__update_bodies(self.__bodies)
+
+        #update the frame of the last update
+        self.__last_updated = cluster.get_last_updated()
+
+
+    #setter functions
+
+    def set_cluster_id(self, c_id):
+        #set the given id to the cluster
+        #also sets that id to each body, and gives the bodies a ref to cluster
+
+        self.__cluster_index = c_id
+        self.__update_bodies(self.__bodies)
+
+        return
+
+
+    #getter functions
 
     def get_bodies(self):
 
@@ -46,6 +73,20 @@ class Cluster:
     def get_body_ids(self):
 
         return [bod.get_id() for bod in self.__bodies]
+
+    def get_cluster_id(self):
+
+        return self.__cluster_index
+
+    def get_last_updated(self):
+
+        return self.__last_updated
+
+    def __update_bodies(self, bodies):
+
+        #update the bodies in the cluster to have the set id
+        for bod in self.__bodies:
+            bod.set_cluster_id(self, self.__cluster_index)
 
 
 
@@ -72,32 +113,6 @@ class ClusterInfo:
     def __set_lifetime(self):
 
         self.__lifetime = self.__death_frame - self.__birth_frame
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -175,7 +190,7 @@ def get_groups(bond_dict):
 
 def get_group_sizes(G):
     #make a histogram of cluster sizes and determine the largest cluster
-    
+
     '''init a dictionary to store histogram data
        number of clusters (value) of each size (key)'''
     size_dict = dict()
@@ -198,3 +213,142 @@ def get_group_sizes(G):
 
     #return size counts
     return size_dict, largest_group_size
+
+
+def update_live(cluster, live_clusters, old_bodies, frame):
+    #use the existing live_clusters to assign an id and update cluster
+
+    #loop over bodies in cluster. get their cluster_id from old_bodies. add to set
+    possibleMatches = set()
+    for body_id in cluster.get_body_ids():
+
+        if len(old_bodies) > 0:
+            old_body = old_bodies[body_id]
+            old_cluster = old_body.get_cluster()
+            print(body_id, old_cluster)
+            if old_cluster is not None:
+                possibleMatches.add(old_cluster)
+
+    #break into cases depending on the number of possible matches
+    
+    if len(possibleMatches) == 0:
+
+        '''
+        If there are no possibleMatches, none of the bodies in this cluster were in clusters
+        during the previous timestep. Thus this is a new cluster. Create a new cluster whose
+        id is one more than the end of live_clusters (todo : this naming may cause issues, fix later?)
+        '''
+
+        #get the new cluster id
+        if len(live_clusters) == 0:
+            new_id = 0
+        else:
+            new_id = live_clusters[-1].get_cluster_id() + 1
+
+        #update the cluster with the new id, and append to live_clusters
+        cluster.set_cluster_id(new_id)
+        live_clusters.append(cluster)
+        print("created new cluster with id ", new_id)
+
+    elif len(possibleMatches) == 1:
+
+        '''
+        If there is exactly one possible match, then all the bodies in this cluster were 
+        either in the same cluster, or not part of a cluster during the previous timestep. 
+        Several cases are possible.
+        1) The structure is exactly the same. 
+        2) The structure has gained monomers 
+        3) The structure has broken into sub-structures
+        '''
+
+        #perform a set difference to determine gain/loss/constant of subunits
+        match = list(possibleMatches)[0]
+        old_not_new = set(match.get_body_ids()).difference(set(cluster.get_body_ids()))
+        new_not_old = set(cluster.get_body_ids()).difference(set(match.get_body_ids()))
+
+        # print("set diffs: ", old_not_new, new_not_old)
+
+        #if two or more particles break off
+        if len(old_not_new) > 1:
+
+            #how to tell if breaking off into monomers or clusters?
+            #if clusters, they will apear in the list of new clusters
+
+            print('help')
+
+        #if the difference is 1 or 0, same or only lost one monomer
+        else:
+
+            match.update(cluster)
+            print("matched cluster to existing")
+
+    else:
+
+        '''
+        If there is more than one potential match, that means that two or more clusters from the
+        previous timestep have coalesced during this frame. If one cluster is bigger than the 
+        others, keep that one. 
+        May also be able to get here if cluster merge and break at the same time. 
+        '''
+        
+        possible_list = list(possibleMatches)
+        for possible_match in possible_list:
+            print('hi')
+
+            #do a set difference between cluster and possible
+            old_not_new = set(possible_match.get_body_ids()).difference(set(cluster.get_body_ids()))
+            new_not_old = set(cluster.get_body_ids()).difference(set(possible_match.get_body_ids()))
+
+            print("set diffs: ", old_not_new, new_not_old)
+
+
+
+    return
+
+
+
+
+def track_clustering(snap, sim, frame, live_clusters, old_bodies):
+    #compute and update cluster stats from the given frame
+
+    #get a list of bodies to analyze
+    bodies = body.create_bodies(snap, sim)
+
+    #init a dictionary to store the bonds present - init with empty lists for each body_id
+    bond_dict = dict()
+    for bod in bodies:
+        bond_dict[bod.get_id()] = []
+
+    #determine the bond network using the list of bodies
+    body.get_bonded_bodies(bodies, sim, bond_dict)
+
+    #determine groups of bonded structures
+    G = get_groups(bond_dict)
+
+    #for each group, create a cluster
+    clusters = []
+    for group in G:
+
+        #check for dimers or larger, create a cluster object
+        if len(group) > 1:
+
+            #extract the involved bodies from the group and create a cluster
+            body_list = [bodies[q] for q in group]
+            clusters.append(Cluster(body_list, frame))
+
+    #for each cluster, see if it matches an existing cluster. If not, create new
+    for cluster in clusters:
+        
+        #build an array of possible matching clusters from cluster_id of bodies
+        update_live(cluster, live_clusters, old_bodies, frame)
+
+    print(len(live_clusters))
+    for c in live_clusters:
+        print(frame, c.get_last_updated())
+
+
+
+
+
+    return bodies
+    

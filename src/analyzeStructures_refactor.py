@@ -371,6 +371,9 @@ class SimInfo:
 ####################################################################
 
 
+
+
+
 def analyze_structures(snap, sim, radius = None, center = None):
     #analyze clusters of subunits and their connectivity
 
@@ -396,6 +399,21 @@ def analyze_structures(snap, sim, radius = None, center = None):
     #determine groups of bonded structures
     G = cluster.get_groups(bond_dict)
     print(G)
+
+    #for each group, create a cluster
+    clusters = []
+    for group in G:
+
+        if len(group) > 1:
+            body_list = [bodies[q] for q in group]
+            print(body_list)
+            clusters.append(cluster.Cluster(body_list))
+            print(clusters[-1].get_body_ids())
+
+
+    sys.exit()
+
+
 
     #count the sizes of each group
     size_counts, largest_group_size = cluster.get_group_sizes(G)
@@ -448,8 +466,12 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
     if write_output:
         fout = open("analysis_out.dat", 'w') 
 
+    #init an array to track live clusters
+    live_clusters = []
+    old_bodies    = []
+
     #loop over each frame and perform the analysis
-    for frame in range(400, frames, jump):
+    for frame in range(18, frames, jump):
 
         #get the snapshot for the current frame
         snap = snaps.read_frame(frame)
@@ -463,7 +485,8 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
         sim.nano_flag = False
         if (not sim.nano_flag):
 
-            q = analyze_structures(snap, sim)
+            # q = analyze_structures(snap, sim)
+            old_bodies = cluster.track_clustering(snap, sim, frame, live_clusters, old_bodies)
 
         else:
             q = []
@@ -475,7 +498,8 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
                     q_i    = analyze_structures(particle_info, sim, r, center) 
                     q.append(q_i) 
 
-        # sys.exit()
+        if frame > 20:
+            sys.exit()
 
         #write to file
         if write_output:
