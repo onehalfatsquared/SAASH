@@ -467,11 +467,11 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
         fout = open("analysis_out.dat", 'w') 
 
     #init an array to track live clusters
-    live_clusters = []
+    cluster_info  = []
     old_bodies    = []
 
     #loop over each frame and perform the analysis
-    for frame in range(18, frames, jump):
+    for frame in range(180, frames, jump):
 
         #get the snapshot for the current frame
         snap = snaps.read_frame(frame)
@@ -486,7 +486,8 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
         if (not sim.nano_flag):
 
             # q = analyze_structures(snap, sim)
-            old_bodies = cluster.track_clustering(snap, sim, frame, live_clusters, old_bodies)
+            cluster_info, old_bodies = cluster.track_clustering(snap, sim, frame, 
+                                                                cluster_info, old_bodies)
 
         else:
             q = []
@@ -498,7 +499,14 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
                     q_i    = analyze_structures(particle_info, sim, r, center) 
                     q.append(q_i) 
 
-        if frame > 20:
+        if frame > 202:
+            ex_data = cluster_info[10].get_data()
+            for clust in ex_data:
+                bods = clust.get_bodies()
+
+                print('sep')
+                for bod in bods:
+                    print(bod.get_position())
             sys.exit()
 
         #write to file

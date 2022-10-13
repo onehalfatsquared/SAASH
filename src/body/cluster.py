@@ -101,18 +101,59 @@ class Cluster:
 
 class ClusterInfo:
 
-    def __init__(self, frame):
+    def __init__(self, cluster, frame, observer = None):
 
-        self.__birth_frame = frame
-        self.__death_frame = -1
+        #init information about birth and death frame for this cluster
+        self.__birth_frame  = frame
+        self.__death_frame  = -1
+        self.__last_updated = -1
+
+        #init an observer
+        self.__observer = observer
+
+        #init storage for observed variables
+        self.__stored_data = []
+        self.update_data(cluster, frame)
+
+        #todo - something about free monomer concentration
+
+        #todo - kill function that sets timescale
+        # do this at the end - i.e. if last updated not equals last frame
 
 
 
+
+
+
+
+
+    def update_data(self, cluster, frame):
+        #append the current cluster's coordinate data to storage
+
+        if frame > self.__last_updated:
+            self.__stored_data.append(self.__compute_coordinate(cluster))
+            self.__last_updated = frame
+
+    def get_data(self):
+
+        return self.__stored_data
 
 
     def __set_lifetime(self):
 
         self.__lifetime = self.__death_frame - self.__birth_frame
+
+    def __compute_coordinate(self, cluster):
+
+        #check if there is an observer. if not, default to number of bodies
+        if self.__observer is None:
+
+            return cluster
+            return len(cluster.get_bodies())
+
+        else:
+
+            raise("Observers are Not implemented yet")
 
 
 
@@ -214,101 +255,236 @@ def get_group_sizes(G):
     #return size counts
     return size_dict, largest_group_size
 
+def get_possible_matches(cluster, old_bodies):
+    #determine which previous clusters each body in current cluster was part of
 
-def update_live(cluster, live_clusters, old_bodies, frame):
-    #use the existing live_clusters to assign an id and update cluster
+    #init a set to store possible cluster matches
+    possibleMatches = set()
 
     #loop over bodies in cluster. get their cluster_id from old_bodies. add to set
-    possibleMatches = set()
     for body_id in cluster.get_body_ids():
 
         if len(old_bodies) > 0:
             old_body = old_bodies[body_id]
             old_cluster = old_body.get_cluster()
-            print(body_id, old_cluster)
+            # print(body_id, old_cluster)
             if old_cluster is not None:
                 possibleMatches.add(old_cluster)
 
-    #break into cases depending on the number of possible matches
-    
-    if len(possibleMatches) == 0:
+    return possibleMatches
 
-        '''
-        If there are no possibleMatches, none of the bodies in this cluster were in clusters
-        during the previous timestep. Thus this is a new cluster. Create a new cluster whose
-        id is one more than the end of live_clusters (todo : this naming may cause issues, fix later?)
-        '''
 
-        #get the new cluster id
-        if len(live_clusters) == 0:
-            new_id = 0
+
+
+def update_live(clusters, cluster_info, old_bodies, frame):
+    #use the existing live_clusters to assign an id and update cluster
+
+    #make a queue for the new clusters and dict to store the mappings
+    queue = [cluster for cluster in clusters]
+    label_dict = dict()
+
+    # print(queue[0])
+    # print(clusters[0])
+
+    #loop over the queue to assign labels to each new cluster
+    while len(queue) > 0:
+
+        #grab the first cluster in queue
+        cluster = queue.pop(0)
+
+        #determine which previous clusters are possible matches for the current cluster
+        possibleMatches = get_possible_matches(cluster, old_bodies)
+
+        if len(possibleMatches) == 0:
+
+            '''
+            If there are no possibleMatches, none of the bodies in this cluster were in clusters
+            during the previous timestep. Thus this is a new cluster. Create a new cluster whose
+            id is the number of elements in cluster_info.
+            '''
+
+            #get the new cluster id
+            cluster_num = len(cluster_info)
+
+            #update the cluster with the new id, add entry to cluster_info
+            cluster.set_cluster_id(cluster_num)
+            label_dict[cluster_num] = [0, cluster]
+            cluster_info.append(ClusterInfo(cluster, frame))
+            print("created new cluster with id ", cluster_num)
+
+        elif len(possibleMatches) == 1:
+
+            '''
+            If there is exactly one possible match, then all the bodies in this cluster were 
+            either in the same cluster, or not part of a cluster during the previous timestep. 
+            Several cases are possible.
+            1) The structure is exactly the same. 
+            2) The structure has gained monomers 
+            3) The structure has broken into sub-structures
+            '''
+
+            #get the match and get its cluster id
+            match = list(possibleMatches)[0]
+            match_id = match.get_cluster_id()
+
+            #perform a set difference to determine gain/loss of subunits
+            old_not_new = set(match.get_body_ids()).difference(set(cluster.get_body_ids()))
+            new_not_old = set(cluster.get_body_ids()).difference(set(match.get_body_ids()))
+
+            #define a similarity, max of the two set differences
+            similarity = max(len(old_not_new), len(new_not_old))
+            print("Similarity (Break): ", similarity)
+            # print("set diffs: ", old_not_new, new_not_old)
+
+            #if two or more particles break off
+            if len(old_not_new) > 1:
+
+                #check if this match has been assigned already
+                if match_id in label_dict.keys():
+
+                    #check if the current similarity score is better 
+                    if similarity < label_dict[match_id][0]:
+
+                        #current cluster is more similar to match. overwrite old cluster
+                        old_cluster = label_dict[match_id][1]
+                        old_cluster.set_cluster_id(-1)
+
+                        #set label for the new cluster
+                        match.update(cluster)
+                        cluster.set_cluster_id(match_id)
+                        label_dict[match_id] = [similarity, cluster]
+
+                        print("Updated cluster match to ", match_id)
+
+                        #add the old cluster to the queue for reassignment
+                        queue.append(old_cluster)
+
+                    #if not, assign a new cluster
+                    else: 
+
+                        #get the new cluster id
+                        cluster_num = len(cluster_info)
+
+                        #update the cluster with the new id, add entry to cluster_info
+                        cluster.set_cluster_id(cluster_num)
+                        label_dict[cluster_num] = [0, cluster]
+                        cluster_info.append(ClusterInfo(cluster, frame))
+                        print("created new cluster with id ", cluster_num)
+
+                #this matching old cluster ha snot been assigned, so assign it
+                else:
+
+                    #update the old cluster with new. This sets the old_bodies references to cluster
+                    match.update(cluster)
+
+                    #grab the cluster id and set it for the new cluster
+                    cluster_id = match.get_cluster_id()
+                    cluster.set_cluster_id(cluster_id)
+                    label_dict[cluster_id] = [similarity, cluster]
+                    
+                    print("matched cluster to existing ", cluster_id)
+
+
+            #if the difference is 1 or 0, same cluster or only lost one monomer
+            else:
+
+                #update the old cluster with new. This sets the old_bodies references to cluster
+                match.update(cluster)
+
+                #grab the cluster id and set it for the new cluster
+                cluster_id = match.get_cluster_id()
+                cluster.set_cluster_id(cluster_id)
+                label_dict[cluster_id] = [similarity, cluster]
+                
+                print("matched cluster to existing ", cluster_id)
+
         else:
-            new_id = live_clusters[-1].get_cluster_id() + 1
 
-        #update the cluster with the new id, and append to live_clusters
-        cluster.set_cluster_id(new_id)
-        live_clusters.append(cluster)
-        print("created new cluster with id ", new_id)
+            '''
+            If there is more than one potential match, that means that two or more clusters from the
+            previous timestep have coalesced during this frame. If one cluster is bigger than the 
+            others, keep that one. 
+            May also be able to get here if cluster merge and break at the same time. 
+            '''
+            
+            print("Clusters have merged")
 
-    elif len(possibleMatches) == 1:
+            #get a list of possible matches, and assign a similarity to each
+            possible_list   = list(possibleMatches)
+            similarity_vals = []
+            for possible_match in possible_list:
 
-        '''
-        If there is exactly one possible match, then all the bodies in this cluster were 
-        either in the same cluster, or not part of a cluster during the previous timestep. 
-        Several cases are possible.
-        1) The structure is exactly the same. 
-        2) The structure has gained monomers 
-        3) The structure has broken into sub-structures
-        '''
+                #do a set difference between cluster and possible
+                old_not_new = set(possible_match.get_body_ids()).difference(set(cluster.get_body_ids()))
+                new_not_old = set(cluster.get_body_ids()).difference(set(possible_match.get_body_ids()))
+                similarity = max(len(old_not_new), len(new_not_old))
+                print("Similarity (Merge): ", similarity)
 
-        #perform a set difference to determine gain/loss/constant of subunits
-        match = list(possibleMatches)[0]
-        old_not_new = set(match.get_body_ids()).difference(set(cluster.get_body_ids()))
-        new_not_old = set(cluster.get_body_ids()).difference(set(match.get_body_ids()))
+                similarity_vals.append(similarity)
 
-        # print("set diffs: ", old_not_new, new_not_old)
+            #sort the possibilities by similarity
+            poss_aug = [(similarity_vals[i], i) for i in range(len(similarity_vals))]
+            poss_aug.sort()
+            sorted_sim,permutation = zip(*poss_aug)
+            sorted_poss = [possible_list[i] for i in permutation]
 
-        #if two or more particles break off
-        if len(old_not_new) > 1:
+            #loop through sorted list. assign this cluster the first un-assigned match
+            match_flag = False
+            for possibility in sorted_poss:
 
-            #how to tell if breaking off into monomers or clusters?
-            #if clusters, they will apear in the list of new clusters
+                #check if match not already assigned. If not, assign it. 
+                match_id = possibility.get_cluster_id()
+                if (match_id not in label_dict.keys()):
 
-            print('help')
+                    possibility.update(cluster)
 
-        #if the difference is 1 or 0, same or only lost one monomer
-        else:
+                    #set id for the new cluster
+                    cluster.set_cluster_id(match_id)
+                    label_dict[match_id] = [similarity, cluster]
+                    match_flag = True
+                    break
 
-            match.update(cluster)
-            print("matched cluster to existing")
+                else:
+                    continue
 
-    else:
+            #if no match has been made after all possibilities, create new cluster
+            if not match_flag:
 
-        '''
-        If there is more than one potential match, that means that two or more clusters from the
-        previous timestep have coalesced during this frame. If one cluster is bigger than the 
-        others, keep that one. 
-        May also be able to get here if cluster merge and break at the same time. 
-        '''
+                print("All clusters assigned. Creating new cluster")
+
+                #get the new cluster id
+                cluster_num = len(cluster_info)
+
+                #update the cluster with the new id, add entry to cluster_info
+                cluster.set_cluster_id(cluster_num)
+                label_dict[cluster_num] = [0, cluster]
+                cluster_info.append(ClusterInfo(cluster, frame))
+                print("created new (merge) cluster with id ", cluster_num)
+
+
+
+    #loop over the now matched clusters and update the cluster_info
+    #(can loop over all keys in the label_dict to avoid unnec work)
+    for key in list(label_dict.keys()):
+
+        #get the cluster
+        updated_cluster = label_dict[key][1]
+
+        #update the clusterinfo
+        cluster_info[key].update_data(updated_cluster, frame)
+        print("Updated cluster {}".format(key))
+
         
-        possible_list = list(possibleMatches)
-        for possible_match in possible_list:
-            print('hi')
-
-            #do a set difference between cluster and possible
-            old_not_new = set(possible_match.get_body_ids()).difference(set(cluster.get_body_ids()))
-            new_not_old = set(cluster.get_body_ids()).difference(set(possible_match.get_body_ids()))
-
-            print("set diffs: ", old_not_new, new_not_old)
+    
 
 
 
-    return
+    return clusters, cluster_info
 
 
 
 
-def track_clustering(snap, sim, frame, live_clusters, old_bodies):
+def track_clustering(snap, sim, frame, cluster_info, old_bodies):
     #compute and update cluster stats from the given frame
 
     #get a list of bodies to analyze
@@ -336,19 +512,13 @@ def track_clustering(snap, sim, frame, live_clusters, old_bodies):
             body_list = [bodies[q] for q in group]
             clusters.append(Cluster(body_list, frame))
 
-    #for each cluster, see if it matches an existing cluster. If not, create new
-    for cluster in clusters:
-        
-        #build an array of possible matching clusters from cluster_id of bodies
-        update_live(cluster, live_clusters, old_bodies, frame)
-
-    print(len(live_clusters))
-    for c in live_clusters:
-        print(frame, c.get_last_updated())
+    #map the clusters from previous timestep to this step to assign labels
+    print("Frame {} updates:".format(frame))
+    clusters, cluster_info = update_live(clusters, cluster_info, old_bodies, frame)
 
 
 
 
 
-    return bodies
+    return cluster_info, bodies
     
