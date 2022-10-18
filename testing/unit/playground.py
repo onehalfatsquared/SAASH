@@ -21,9 +21,11 @@ sys.path.insert(0, '../../src')
 #import profiling tools
 import cProfile, pstats
 import re
+import time
 
 from body import body
 from body import neighborgrid
+from body import cluster
 import analyzeStructures_refactor as test
 import analyzeStructures as original
 
@@ -140,6 +142,80 @@ def get_ex_particle_info(gsd_file, ixn_file, frame):
 
     return
 
+def plot_clusters(coordinates):
+    #coordinates contains time series of cluster body positions. plot them
+     
+    figure, ax = plt.subplots()
+    ax.set_xlim((-7, 7))
+    ax.set_ylim((-7, 7))
+
+    # Loop
+    for i in range(len(coordinates)):
+
+        ax.patches = []
+        bodies = coordinates[i]
+        for bod in bodies:
+            center = (bod[0], bod[1])
+            circle = plt.Circle(center, 0.5, color='blue')
+            ax.add_patch(circle)
+
+        print(i)
+     
+
+        plt.pause(0.1)
+
+
+def run_and_plot_clusters():
+
+    gsd_file = "../patchy_2d/traj.gsd"
+    ixn_file = "../patchy_2d/interactions.txt"
+    jump = 1
+
+    #get the collection of snapshots and get number of frames
+    snaps = gsd.hoomd.open(name=gsd_file, mode="rb")
+    snap = snaps.read_frame(0)
+    frames = len(snaps)
+
+    #gather all the relevant global info into a SimInfo object
+    sim = test.SimInfo(snap, frames, ixn_file = ixn_file)
+
+    #create an observer to compute requested observables
+    observer = cluster.Observer(gsd_file)
+    observer.init_test_set()
+
+    #init an array to track live clusters
+    cluster_info  = []
+    old_bodies    = []
+
+    #loop over each frame and perform the analysis
+    max_frame = 400
+    for frame in range(0, max_frame, jump):
+
+        #print message to user about frame num
+        print("Analyzing frame ", frame)
+
+        #get the snapshot for the current frame
+        snap = snaps.read_frame(frame)
+
+        #do the cluster tracking
+        cluster_info, old_bodies = cluster.track_clustering(snap, sim, frame, 
+                                                                cluster_info, old_bodies,
+                                                                observer=observer)
+
+    #grab coordinates from a test cluster to plot in time
+    test_cluster = 14
+    cluster_data = cluster_info[test_cluster].get_data()
+    test_coordinates = []
+    for i in range(len(cluster_data)):
+        test_coordinates.append(cluster_data[i]['positions'])
+
+    plot_clusters(test_coordinates)
+
+
+
+
+    return 
+
 
 
 
@@ -154,8 +230,8 @@ def run_profile():
     # ixn_file = "../triangles_T3/interactionsT3.txt"
 
     #patchy 2d test
-    # gsd_file = "../patchy_2d/traj.gsd"
-    # ixn_file = "../patchy_2d/interactions.txt"
+    gsd_file = "../patchy_2d/traj.gsd"
+    ixn_file = "../patchy_2d/interactions.txt"
 
     test.run_analysis(gsd_file, ixn_file = ixn_file, jump=50)
     # original.run_analysis(gsd_file, ixn_file = ixn_file, jump = 50)
@@ -173,17 +249,23 @@ if __name__ == "__main__":
     # ixn_file = "../triangles_T3/interactionsT3.txt"
 
     #patchy 2d test
-    # gsd_file = "../patchy_2d/traj.gsd"
-    # ixn_file = "../patchy_2d/interactions.txt"
+    gsd_file = "../patchy_2d/traj.gsd"
+    ixn_file = "../patchy_2d/interactions.txt"
 
 
 
-
+    #random testing stuff
     # get_ex_particle_info(gsd_file, ixn_file, 500)
     # test_distance()
     # test_subunit_size(gsd_file, ixn_file, 5)
     test.run_analysis(gsd_file, ixn_file = ixn_file)
 
+    #plot clustering test
+    # run_and_plot_clusters()
+
+
+
+    #profiling for speed
     # cProfile.run('run_profile()', 'restats')
     # p = pstats.Stats('restats')
     # p.strip_dirs().sort_stats('tottime').print_stats(15)

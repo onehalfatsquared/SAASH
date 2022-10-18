@@ -74,6 +74,10 @@ class Cluster:
 
         return [bod.get_id() for bod in self.__bodies]
 
+    def get_body_positions(self):
+
+        return [bod.get_position() for bod in self.__bodies]
+
     def get_cluster_id(self):
 
         return self.__cluster_index
@@ -144,20 +148,75 @@ class ClusterInfo:
         self.__lifetime = self.__death_frame - self.__birth_frame
 
     def __compute_coordinate(self, cluster):
+        '''this computes various observables for the cluster, based on user input
+           given to the observer class. Default is simply number of bodies'''
+
+        #init a dict to store properties of the cluster
+        property_dict = dict()
 
         #check if there is an observer. if not, default to number of bodies
         if self.__observer is None:
 
-            return cluster
-            return len(cluster.get_bodies())
+            property_dict['num_bodies'] = len(cluster.get_bodies())
 
+        #if there is an observer, compute all requested properties
         else:
 
-            raise("Observers are Not implemented yet")
+            observables = self.__observer.get_observables()
+
+            for obs in observables:
+
+                if obs == "num_bodies":
+
+                    property_dict['num_bodies'] = len(cluster.get_bodies())
+
+                elif obs == "positions":
+
+                    property_dict['positions'] = cluster.get_body_positions()
+
+                else:
+
+                    raise("The requested property is not implemented. Check that it is"\
+                        " implemented and spelled correctly")
+
+
+            
+
+
+        return property_dict
 
 
 
 
+
+class Observer:
+
+    def __init__(self, gsd_file):
+
+        #use the gsd file to determine an output file for this run - todo
+        self.__outfile = "test_out.py"
+
+        #todo - determine obersvables fromm an input file
+
+
+        #init a set of observables to compute
+        self.__observable_set = set()
+
+
+
+
+    def add_observable(self, observable):
+
+        self.__observable_set.add(observable)
+
+    def get_observables(self):
+
+        return self.__observable_set
+
+    def init_test_set(self):
+        #init the observable set to those helpful for testing
+
+        self.__observable_set = set(['positions'])
 
 
 
@@ -276,12 +335,15 @@ def get_possible_matches(cluster, old_bodies):
 
 
 
-def update_live(clusters, cluster_info, old_bodies, frame):
+def update_live(clusters, cluster_info, old_bodies, frame, observer=None):
     #use the existing live_clusters to assign an id and update cluster
 
     #make a queue for the new clusters and dict to store the mappings
     queue = [cluster for cluster in clusters]
     label_dict = dict()
+
+    #make a list to store death updates for merging - entries (dying id, new cluster id)
+    merge_updates = []
 
     # print(queue[0])
     # print(clusters[0])
@@ -309,7 +371,7 @@ def update_live(clusters, cluster_info, old_bodies, frame):
             #update the cluster with the new id, add entry to cluster_info
             cluster.set_cluster_id(cluster_num)
             label_dict[cluster_num] = [0, cluster]
-            cluster_info.append(ClusterInfo(cluster, frame))
+            cluster_info.append(ClusterInfo(cluster, frame, observer=observer))
             print("created new cluster with id ", cluster_num)
 
         elif len(possibleMatches) == 1:
@@ -354,7 +416,8 @@ def update_live(clusters, cluster_info, old_bodies, frame):
                         cluster.set_cluster_id(match_id)
                         label_dict[match_id] = [similarity, cluster]
 
-                        print("Updated cluster match to ", match_id)
+                        print("Better match found. Updated cluster match to ", match_id)
+                        sys.exit()
 
                         #add the old cluster to the queue for reassignment
                         queue.append(old_cluster)
@@ -368,10 +431,10 @@ def update_live(clusters, cluster_info, old_bodies, frame):
                         #update the cluster with the new id, add entry to cluster_info
                         cluster.set_cluster_id(cluster_num)
                         label_dict[cluster_num] = [0, cluster]
-                        cluster_info.append(ClusterInfo(cluster, frame))
-                        print("created new cluster with id ", cluster_num)
+                        cluster_info.append(ClusterInfo(cluster, frame, observer=observer))
+                        print("Match found with worse similarity. Created new cluster with id ", cluster_num)
 
-                #this matching old cluster ha snot been assigned, so assign it
+                #this matching old cluster has not been assigned, so assign it
                 else:
 
                     #update the old cluster with new. This sets the old_bodies references to cluster
@@ -434,22 +497,29 @@ def update_live(clusters, cluster_info, old_bodies, frame):
 
                 #check if match not already assigned. If not, assign it. 
                 match_id = possibility.get_cluster_id()
-                if (match_id not in label_dict.keys()):
+                if (not match_flag):
+                    if (match_id not in label_dict.keys()):
 
-                    possibility.update(cluster)
+                        possibility.update(cluster)
 
-                    #set id for the new cluster
-                    cluster.set_cluster_id(match_id)
-                    label_dict[match_id] = [similarity, cluster]
-                    match_flag = True
-                    break
+                        #set id for the new cluster
+                        cluster.set_cluster_id(match_id)
+                        label_dict[match_id] = [similarity, cluster]
+                        match_flag = True
+                        assigned_id = match_id
 
+                    else:
+                        continue
+
+                #match is already assigned, set other possibilities to update to it and die 
                 else:
-                    continue
+
+                    merge_updates.append((match_id, assigned_id))
 
             #if no match has been made after all possibilities, create new cluster
             if not match_flag:
 
+                #i dont think its possible to get here, but we shall see
                 print("All clusters assigned. Creating new cluster")
 
                 #get the new cluster id
@@ -458,8 +528,10 @@ def update_live(clusters, cluster_info, old_bodies, frame):
                 #update the cluster with the new id, add entry to cluster_info
                 cluster.set_cluster_id(cluster_num)
                 label_dict[cluster_num] = [0, cluster]
-                cluster_info.append(ClusterInfo(cluster, frame))
+                cluster_info.append(ClusterInfo(cluster, frame, observer=observer))
                 print("created new (merge) cluster with id ", cluster_num)
+
+        #update the unmatched possibilities
 
 
 
@@ -484,7 +556,7 @@ def update_live(clusters, cluster_info, old_bodies, frame):
 
 
 
-def track_clustering(snap, sim, frame, cluster_info, old_bodies):
+def track_clustering(snap, sim, frame, cluster_info, old_bodies, observer=None):
     #compute and update cluster stats from the given frame
 
     #get a list of bodies to analyze
@@ -503,6 +575,7 @@ def track_clustering(snap, sim, frame, cluster_info, old_bodies):
 
     #for each group, create a cluster
     clusters = []
+    num_monomers = 0
     for group in G:
 
         #check for dimers or larger, create a cluster object
@@ -512,9 +585,18 @@ def track_clustering(snap, sim, frame, cluster_info, old_bodies):
             body_list = [bodies[q] for q in group]
             clusters.append(Cluster(body_list, frame))
 
+        #increment the number of free monomers
+        else:
+            num_monomers += 1
+
+    #set the monomer fraction
+    monomer_frac = num_monomers / len(bodies)
+    print(monomer_frac)
+
     #map the clusters from previous timestep to this step to assign labels
     print("Frame {} updates:".format(frame))
-    clusters, cluster_info = update_live(clusters, cluster_info, old_bodies, frame)
+    clusters, cluster_info = update_live(clusters, cluster_info, old_bodies, frame, 
+                                         observer=observer)
 
 
 
