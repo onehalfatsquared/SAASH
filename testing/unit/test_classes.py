@@ -135,10 +135,12 @@ def testClusteringMerge():
     #call update again
     clusters, cluster_info = cluster.update_live(clusters, cluster_info, old_bodies, 1)
 
-
     #do check on clusterinfo
-    print(cluster_info[0].get_data())
-    print(cluster_info[1].get_data())
+    assert(cluster_info[0].get_data()[0]['num_bodies'] == 4)
+    assert(cluster_info[1].get_data()[0]['num_bodies'] == 6)
+    assert(cluster_info[0].get_data()[1]['num_bodies'] == 10)
+    assert(cluster_info[1].get_data()[1]['num_bodies'] == 10)
+    assert(cluster_info[0].is_dead() == True)
 
 
 

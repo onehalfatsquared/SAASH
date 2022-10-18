@@ -111,6 +111,8 @@ class ClusterInfo:
         self.__birth_frame  = frame
         self.__death_frame  = -1
         self.__last_updated = -1
+        self.__lifetime     = -1
+        self.__is_dead      = False
 
         #init an observer
         self.__observer = observer
@@ -129,23 +131,42 @@ class ClusterInfo:
 
 
 
+    def kill(self, frame):
+        # set this cluster to dead status
 
+        self.__death_frame = frame
+        self.__set_lifetime()
+        self.__is_dead = True
+
+        return
 
     def update_data(self, cluster, frame):
         #append the current cluster's coordinate data to storage
 
-        if frame > self.__last_updated:
+        if (frame > self.__last_updated and not self.__is_dead):
             self.__stored_data.append(self.__compute_coordinate(cluster))
             self.__last_updated = frame
+
+        return
 
     def get_data(self):
 
         return self.__stored_data
 
+    def get_lifetime(self):
+
+        return self.__lifetime
+
+    def is_dead(self):
+
+        return self.__is_dead
+
 
     def __set_lifetime(self):
 
         self.__lifetime = self.__death_frame - self.__birth_frame
+
+        return
 
     def __compute_coordinate(self, cluster):
         '''this computes various observables for the cluster, based on user input
@@ -546,6 +567,17 @@ def update_live(clusters, cluster_info, old_bodies, frame, observer=None):
         cluster_info[key].update_data(updated_cluster, frame)
         print("Updated cluster {}".format(key))
 
+    #loop over the clusters that merged and are no longer tracked
+    for update_pair in merge_updates:
+
+        old_id = update_pair[0]
+        current_id = update_pair[1]
+        current_cluster = label_dict[current_id][1]
+
+        #update to cluster, but also set a death
+        cluster_info[old_id].update_data(current_cluster, frame)
+        cluster_info[old_id].kill(frame)
+        print("Updated and killed cluster {} (Merge)".format(old_id))
         
     
 
