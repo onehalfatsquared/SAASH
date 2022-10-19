@@ -142,6 +142,100 @@ def testClusteringMerge():
     assert(cluster_info[1].get_data()[1]['num_bodies'] == 10)
     assert(cluster_info[0].is_dead() == True)
 
+    print("Merge Test 1 Passed")
+
+    return
+
+
+
+def testClusteringSplit():
+
+    #init arrays for storage
+    old_bodies = []
+    cluster_info = []
+
+    #create a list of 10 generic bodies
+    bodies     = []
+    for i in range(10):
+        bodies.append(body.Body([0],[0],i))
+
+    #assign bodies to single cluster
+    clusters = []
+    clusters.append(cluster.Cluster(bodies, 0))
+
+    #do first call on update_clusters - sets the initial cluster with id 0
+    clusters, cluster_info = cluster.update_live(clusters, cluster_info, old_bodies, 0)
+
+    #check that there is one cluster with index 0
+    assert(len(cluster_info) == 1)
+    assert(cluster_info[0].get_data()[0]['num_bodies'] == 10)
+
+    #set old bodies to bodies, make new bodies, assign them split to two clusters
+    old_bodies = bodies
+    bodies = []
+    for i in range(10):
+        bodies.append(body.Body([0],[0],i))
+
+    clusters = []
+    clusters.append(cluster.Cluster(bodies[0:4], 1))
+    clusters.append(cluster.Cluster(bodies[4:10], 1))
+
+    #call update again
+    clusters, cluster_info = cluster.update_live(clusters, cluster_info, old_bodies, 1)
+
+    #do check on clusterinfo
+    assert(cluster_info[0].get_data()[0]['num_bodies'] == 10)
+    assert(cluster_info[1].get_data()[0]['num_bodies'] == 10)
+    assert(cluster_info[0].get_data()[1]['num_bodies'] == 6)
+    assert(cluster_info[1].get_data()[1]['num_bodies'] == 4)
+
+    return
+
+
+def testMonomerLoss(num_mon = 1):
+
+    #init arrays for storage
+    old_bodies = []
+    cluster_info = []
+
+    #create a list of 10 generic bodies
+    bodies     = []
+    for i in range(10):
+        bodies.append(body.Body([0],[0],i))
+
+    #assign bodies to single cluster
+    clusters = []
+    clusters.append(cluster.Cluster(bodies, 0))
+
+    #do first call on update_clusters - sets the initial cluster with id 0
+    clusters, cluster_info = cluster.update_live(clusters, cluster_info, old_bodies, 0)
+
+    #check that there is one cluster with index 0
+    assert(len(cluster_info) == 1)
+    assert(cluster_info[0].get_data()[0]['num_bodies'] == 10)
+
+    #set old bodies to bodies, make new bodies, assign them split to two clusters
+    old_bodies = bodies
+    bodies = []
+    for i in range(10):
+        bodies.append(body.Body([0],[0],i))
+
+    clusters = []
+    clusters.append(cluster.Cluster(bodies[0:10-num_mon], 1))
+
+    #call update again
+    clusters, cluster_info = cluster.update_live(clusters, cluster_info, old_bodies, 1)
+
+    print(cluster_info[0].get_data())
+
+    assert(cluster_info[0].get_data()[0]['num_bodies'] == 10)
+    assert(cluster_info[0].get_data()[1]['num_bodies'] == 10-num_mon)
+
+    return
+
+
+
+
 
 
 
@@ -162,3 +256,6 @@ if __name__ == "__main__":
     # testBodyBind()
 
     testClusteringMerge()
+    testClusteringSplit()
+    testMonomerLoss()
+    testMonomerLoss(2)

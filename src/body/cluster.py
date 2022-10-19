@@ -113,6 +113,7 @@ class ClusterInfo:
         self.__last_updated = -1
         self.__lifetime     = -1
         self.__is_dead      = False
+        self.__has_parent   = False
 
         #init an observer
         self.__observer = observer
@@ -123,12 +124,20 @@ class ClusterInfo:
 
         #todo - something about free monomer concentration
 
-        #todo - kill function that sets timescale
-        # do this at the end - i.e. if last updated not equals last frame
+        #todo - check that timescale gives number of entries in data. 
+        #may need to offset this by 1, since counting starts at 0
 
 
 
 
+    def set_parent(self,cluster):
+        #set the given cluster to be the parent of the cluster, i.e. first in stored data
+
+        if not self.__has_parent:
+            self.__stored_data.insert(0, self.__compute_coordinate(cluster))
+            self.__has_parent = True
+
+        return
 
 
     def kill(self, frame):
@@ -366,8 +375,8 @@ def update_live(clusters, cluster_info, old_bodies, frame, observer=None):
     #make a list to store death updates for merging - entries (dying id, new cluster id)
     merge_updates = []
 
-    # print(queue[0])
-    # print(clusters[0])
+    #make a dict to store tentative updates during the matching. Apply at the end
+    tentative_updates = dict()
 
     #loop over the queue to assign labels to each new cluster
     while len(queue) > 0:
@@ -414,8 +423,11 @@ def update_live(clusters, cluster_info, old_bodies, frame, observer=None):
             old_not_new = set(match.get_body_ids()).difference(set(cluster.get_body_ids()))
             new_not_old = set(cluster.get_body_ids()).difference(set(match.get_body_ids()))
 
+            print(old_not_new, new_not_old)
+
             #define a similarity, max of the two set differences
             similarity = max(len(old_not_new), len(new_not_old))
+            # similarity = len(old_not_new)
             print("Similarity (Break): ", similarity)
             # print("set diffs: ", old_not_new, new_not_old)
 
@@ -433,12 +445,12 @@ def update_live(clusters, cluster_info, old_bodies, frame, observer=None):
                         old_cluster.set_cluster_id(-1)
 
                         #set label for the new cluster
-                        match.update(cluster)
+                        #match.update(cluster)
+                        tentative_updates[match] = cluster
                         cluster.set_cluster_id(match_id)
                         label_dict[match_id] = [similarity, cluster]
 
                         print("Better match found. Updated cluster match to ", match_id)
-                        sys.exit()
 
                         #add the old cluster to the queue for reassignment
                         queue.append(old_cluster)
@@ -453,13 +465,15 @@ def update_live(clusters, cluster_info, old_bodies, frame, observer=None):
                         cluster.set_cluster_id(cluster_num)
                         label_dict[cluster_num] = [0, cluster]
                         cluster_info.append(ClusterInfo(cluster, frame, observer=observer))
+                        cluster_info[-1].set_parent(match)
                         print("Match found with worse similarity. Created new cluster with id ", cluster_num)
 
                 #this matching old cluster has not been assigned, so assign it
                 else:
 
                     #update the old cluster with new. This sets the old_bodies references to cluster
-                    match.update(cluster)
+                    #match.update(cluster)
+                    tentative_updates[match] = cluster
 
                     #grab the cluster id and set it for the new cluster
                     cluster_id = match.get_cluster_id()
@@ -473,7 +487,8 @@ def update_live(clusters, cluster_info, old_bodies, frame, observer=None):
             else:
 
                 #update the old cluster with new. This sets the old_bodies references to cluster
-                match.update(cluster)
+                #match.update(cluster)
+                tentative_updates[match] = cluster
 
                 #grab the cluster id and set it for the new cluster
                 cluster_id = match.get_cluster_id()
@@ -502,6 +517,7 @@ def update_live(clusters, cluster_info, old_bodies, frame, observer=None):
                 old_not_new = set(possible_match.get_body_ids()).difference(set(cluster.get_body_ids()))
                 new_not_old = set(cluster.get_body_ids()).difference(set(possible_match.get_body_ids()))
                 similarity = max(len(old_not_new), len(new_not_old))
+                # similarity = len(new_not_old)
                 print("Similarity (Merge): ", similarity)
 
                 similarity_vals.append(similarity)
@@ -552,9 +568,11 @@ def update_live(clusters, cluster_info, old_bodies, frame, observer=None):
                 cluster_info.append(ClusterInfo(cluster, frame, observer=observer))
                 print("created new (merge) cluster with id ", cluster_num)
 
-        #update the unmatched possibilities
 
+    #loop over the tentative updates and apply them
+    for key in tentative_updates.keys():
 
+        key.update(tentative_updates[key])
 
     #loop over the now matched clusters and update the cluster_info
     #(can loop over all keys in the label_dict to avoid unnec work)
