@@ -116,7 +116,7 @@ def testClusteringMerge():
     clusters.append(cluster.Cluster(bodies[4:10], 0))
 
     #do first call on update_clusters - sets the initial clusters with id 0 and 1
-    clusters, cluster_info = cluster.update_live(clusters, cluster_info, old_bodies, 0)
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 0)
 
     #check that there are two clusters with corresponding indices
     assert(len(cluster_info) == 2)
@@ -133,7 +133,7 @@ def testClusteringMerge():
     clusters.append(cluster.Cluster(bodies, 1))
 
     #call update again
-    clusters, cluster_info = cluster.update_live(clusters, cluster_info, old_bodies, 1)
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 1)
 
     #do check on clusterinfo
     assert(cluster_info[0].get_data()[0]['num_bodies'] == 4)
@@ -164,7 +164,7 @@ def testClusteringSplit():
     clusters.append(cluster.Cluster(bodies, 0))
 
     #do first call on update_clusters - sets the initial cluster with id 0
-    clusters, cluster_info = cluster.update_live(clusters, cluster_info, old_bodies, 0)
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 0)
 
     #check that there is one cluster with index 0
     assert(len(cluster_info) == 1)
@@ -181,7 +181,7 @@ def testClusteringSplit():
     clusters.append(cluster.Cluster(bodies[4:10], 1))
 
     #call update again
-    clusters, cluster_info = cluster.update_live(clusters, cluster_info, old_bodies, 1)
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 1)
 
     #do check on clusterinfo
     assert(cluster_info[0].get_data()[0]['num_bodies'] == 10)
@@ -208,13 +208,13 @@ def testMonomerLoss(num_mon = 1):
     clusters.append(cluster.Cluster(bodies, 0))
 
     #do first call on update_clusters - sets the initial cluster with id 0
-    clusters, cluster_info = cluster.update_live(clusters, cluster_info, old_bodies, 0)
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 0)
 
     #check that there is one cluster with index 0
     assert(len(cluster_info) == 1)
     assert(cluster_info[0].get_data()[0]['num_bodies'] == 10)
 
-    #set old bodies to bodies, make new bodies, assign them split to two clusters
+    #set old bodies to bodies, make new bodies, remove some as monomers
     old_bodies = bodies
     bodies = []
     for i in range(10):
@@ -224,27 +224,116 @@ def testMonomerLoss(num_mon = 1):
     clusters.append(cluster.Cluster(bodies[0:10-num_mon], 1))
 
     #call update again
-    clusters, cluster_info = cluster.update_live(clusters, cluster_info, old_bodies, 1)
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 1)
 
     print(cluster_info[0].get_data())
 
     assert(cluster_info[0].get_data()[0]['num_bodies'] == 10)
     assert(cluster_info[0].get_data()[1]['num_bodies'] == 10-num_mon)
 
+    print(cluster_info[0].get_monomer_loss_data())
+
+    assert(cluster_info[0].get_monomer_loss_data()[0][0]['num_bodies'] == 10)
+    assert(cluster_info[0].get_monomer_loss_data()[0][1] == num_mon)
+
     return
 
 
+def testMonomerGain(num_mon = 1):
 
+    #init arrays for storage
+    old_bodies = []
+    cluster_info = []
 
+    #create a list of 10 generic bodies
+    bodies     = []
+    for i in range(10):
+        bodies.append(body.Body([0],[0],i))
 
+    #assign all but num_mon bodies to single cluster
+    clusters = []
+    clusters.append(cluster.Cluster(bodies[0:10-num_mon], 0))
 
+    #do first call on update_clusters - sets the initial cluster with id 0
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 0)
 
+    #check that there is one cluster with index 0
+    assert(len(cluster_info) == 1)
+    assert(cluster_info[0].get_data()[0]['num_bodies'] == 10-num_mon)
 
+    #set old bodies to bodies, make new bodies, make cluster with all bodies
+    old_bodies = bodies
+    bodies = []
+    for i in range(10):
+        bodies.append(body.Body([0],[0],i))
 
+    clusters = []
+    clusters.append(cluster.Cluster(bodies[0:10], 1))
 
+    #call update again
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 1)
 
+    print(cluster_info[0].get_data())
 
+    assert(cluster_info[0].get_data()[0]['num_bodies'] == 10-num_mon)
+    assert(cluster_info[0].get_data()[1]['num_bodies'] == 10)
 
+    print(cluster_info[0].get_monomer_gain_data())
+
+    assert(cluster_info[0].get_monomer_gain_data()[0][0]['num_bodies'] == 10)
+    assert(cluster_info[0].get_monomer_gain_data()[0][1] == num_mon)
+
+    return
+
+def testMonomerGainLoss():
+    #test what happens if one monomer attaches and another detaches. 
+
+    #init arrays for storage
+    old_bodies = []
+    cluster_info = []
+
+    #create a list of 10 generic bodies
+    bodies     = []
+    for i in range(10):
+        bodies.append(body.Body([0],[0],i))
+
+    #assign all but body 0 to single cluster
+    clusters = []
+    clusters.append(cluster.Cluster(bodies[1:10], 0))
+
+    #do first call on update_clusters - sets the initial cluster with id 0
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 0)
+
+    #check that there is one cluster with index 0
+    assert(len(cluster_info) == 1)
+    assert(cluster_info[0].get_data()[0]['num_bodies'] == 9)
+
+    #set old bodies to bodies, make new bodies, make cluster with body0 but w/o 9
+    old_bodies = bodies
+    bodies = []
+    for i in range(10):
+        bodies.append(body.Body([0],[0],i))
+
+    clusters = []
+    clusters.append(cluster.Cluster(bodies[0:9], 1))
+
+    #call update again
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 1)
+
+    print(cluster_info[0].get_data())
+
+    assert(cluster_info[0].get_data()[0]['num_bodies'] == 9)
+    assert(cluster_info[0].get_data()[1]['num_bodies'] == 9)
+
+    print(cluster_info[0].get_monomer_gain_data())
+
+    assert(cluster_info[0].get_monomer_gain_data()[0][0]['num_bodies'] == 9)
+    assert(cluster_info[0].get_monomer_gain_data()[0][1] == 1)
+
+    print(cluster_info[0].get_monomer_loss_data())
+
+    assert(cluster_info[0].get_monomer_loss_data()[0][0]['num_bodies'] == 9)
+    assert(cluster_info[0].get_monomer_loss_data()[0][1] == 1)
 
 
 
@@ -259,3 +348,6 @@ if __name__ == "__main__":
     testClusteringSplit()
     testMonomerLoss()
     testMonomerLoss(2)
+    testMonomerGain()
+    testMonomerGain(2)
+    testMonomerGainLoss()

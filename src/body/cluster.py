@@ -122,6 +122,10 @@ class ClusterInfo:
         self.__stored_data = []
         self.update_data(cluster, frame)
 
+        #init storage for monomer stats
+        self.__from_monomer = []
+        self.__to_monomer   = []
+
         #todo - something about free monomer concentration
 
         #todo - check that timescale gives number of entries in data. 
@@ -138,7 +142,6 @@ class ClusterInfo:
             self.__has_parent = True
 
         return
-
 
     def kill(self, frame):
         # set this cluster to dead status
@@ -158,9 +161,29 @@ class ClusterInfo:
 
         return
 
+    def add_monomers(self, cluster, num_monomers):
+        #update the from_monomer list to denote a transition from monomer to cluster
+
+        self.__from_monomer.append((self.__compute_coordinate(cluster), num_monomers))
+        return
+
+    def remove_monomers(self, cluster, num_monomers):
+        #update the to_monomer list to denote a transition from cluster to monomer
+
+        self.__to_monomer.append((self.__compute_coordinate(cluster), num_monomers))
+        return
+
     def get_data(self):
 
         return self.__stored_data
+
+    def get_monomer_gain_data(self):
+
+        return self.__from_monomer
+
+    def get_monomer_loss_data(self):
+
+        return self.__to_monomer
 
     def get_lifetime(self):
 
@@ -362,11 +385,35 @@ def get_possible_matches(cluster, old_bodies):
 
     return possibleMatches
 
+def get_monomer_stats(old_ids, new_ids, old_bodies, new_bodies):
+    #determine the number of monomer additions and subtractions from old to new cluster
+
+    #init counters for number of monomers gained and lost
+    monomers_gained = 0
+    monomers_lost   = 0
+
+    #first, do additions. look at ids in new but not old, and check cluster in old_bodies
+    new_not_old = new_ids.difference(old_ids)
+    for entry in new_not_old:
+
+        cluster_id = old_bodies[entry].get_cluster_id()
+        if cluster_id == -1:
+            monomers_gained += 1
+
+    #next do subtractions. look at ids in old but not new. check cluster in bodies
+    old_not_new = old_ids.difference(new_ids)
+    for entry in old_not_new:
+
+        cluster_id = new_bodies[entry].get_cluster_id()
+        if cluster_id == -1:
+            monomers_lost += 1
+
+    return monomers_gained, monomers_lost
 
 
 
-def update_live(clusters, cluster_info, old_bodies, frame, observer=None):
-    #use the existing live_clusters to assign an id and update cluster
+def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=None):
+    #use the existing clusters to assign an id and update cluster
 
     #make a queue for the new clusters and dict to store the mappings
     queue = [cluster for cluster in clusters]
@@ -537,7 +584,8 @@ def update_live(clusters, cluster_info, old_bodies, frame, observer=None):
                 if (not match_flag):
                     if (match_id not in label_dict.keys()):
 
-                        possibility.update(cluster)
+                        # possibility.update(cluster)
+                        tentative_updates[possibility] = cluster
 
                         #set id for the new cluster
                         cluster.set_cluster_id(match_id)
@@ -569,9 +617,30 @@ def update_live(clusters, cluster_info, old_bodies, frame, observer=None):
                 print("created new (merge) cluster with id ", cluster_num)
 
 
-    #loop over the tentative updates and apply them
+    #loop over the tentative updates and apply them. do monomer checking first
     for key in tentative_updates.keys():
 
+        #get lists of the body ids in the pre and post update clusters
+        past_ids = set(key.get_body_ids())
+        new_ids  = set(tentative_updates[key].get_body_ids())
+
+        #determine how many monomers were gained and lost from these id sets
+        m_gain, m_lost = get_monomer_stats(past_ids, new_ids, old_bodies, bodies)
+        print("Monomer gain {}, Monomer loss {}".format(m_gain, m_lost))
+
+        #update the monomer stats
+        if m_gain > 0:
+
+            cluster_id = key.get_cluster_id()
+            cluster_info[cluster_id].add_monomers(tentative_updates[key], m_gain)
+
+        if m_lost > 0:
+
+            cluster_id = key.get_cluster_id()
+            cluster_info[cluster_id].remove_monomers(key, m_lost)
+
+
+        #perform the update on the cluster
         key.update(tentative_updates[key])
 
     #loop over the now matched clusters and update the cluster_info
@@ -596,9 +665,6 @@ def update_live(clusters, cluster_info, old_bodies, frame, observer=None):
         cluster_info[old_id].update_data(current_cluster, frame)
         cluster_info[old_id].kill(frame)
         print("Updated and killed cluster {} (Merge)".format(old_id))
-        
-    
-
 
 
     return clusters, cluster_info
@@ -645,8 +711,8 @@ def track_clustering(snap, sim, frame, cluster_info, old_bodies, observer=None):
 
     #map the clusters from previous timestep to this step to assign labels
     print("Frame {} updates:".format(frame))
-    clusters, cluster_info = update_live(clusters, cluster_info, old_bodies, frame, 
-                                         observer=observer)
+    clusters, cluster_info = update_clusters(clusters, cluster_info, bodies, old_bodies, 
+                                             frame, observer=observer)
 
 
 
