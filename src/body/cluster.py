@@ -5,10 +5,11 @@ between simulation frames.
 
 A cluster is simply an indexed collection of bodies. 
 
-Each cluster that forms in a simulation is given a birth frame. It then tracks statistics 
-about the cluster from frame to frame, including the monomer concentration at that point. 
-If a cluster dissociates, it is given a death frame, and lifetime. 
+For each cluster that forms, a ClusterInfo object is created. This keeps track of birth
+and death frames of a cluster and keeps a time series of cluster properties that the user 
+can choose from. 
 
+Monomer concentration note... 
 
 
 '''
@@ -257,7 +258,6 @@ class Observer:
 
 
 
-
     def add_observable(self, observable):
 
         self.__observable_set.add(observable)
@@ -449,7 +449,8 @@ def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=
             cluster.set_cluster_id(cluster_num)
             label_dict[cluster_num] = [0, cluster]
             cluster_info.append(ClusterInfo(cluster, frame, observer=observer))
-            print("created new cluster with id ", cluster_num)
+            cluster_info[cluster_num].add_monomers(cluster, len(cluster.get_bodies()))
+            # print("created new cluster with id ", cluster_num)
 
         elif len(possibleMatches) == 1:
 
@@ -470,12 +471,12 @@ def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=
             old_not_new = set(match.get_body_ids()).difference(set(cluster.get_body_ids()))
             new_not_old = set(cluster.get_body_ids()).difference(set(match.get_body_ids()))
 
-            print(old_not_new, new_not_old)
+            # print(old_not_new, new_not_old)
 
             #define a similarity, max of the two set differences
             similarity = max(len(old_not_new), len(new_not_old))
             # similarity = len(old_not_new)
-            print("Similarity (Break): ", similarity)
+            # print("Similarity (Break): ", similarity)
             # print("set diffs: ", old_not_new, new_not_old)
 
             #if two or more particles break off
@@ -497,7 +498,7 @@ def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=
                         cluster.set_cluster_id(match_id)
                         label_dict[match_id] = [similarity, cluster]
 
-                        print("Better match found. Updated cluster match to ", match_id)
+                        # print("Better match found. Updated cluster match to ", match_id)
 
                         #add the old cluster to the queue for reassignment
                         queue.append(old_cluster)
@@ -513,7 +514,7 @@ def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=
                         label_dict[cluster_num] = [0, cluster]
                         cluster_info.append(ClusterInfo(cluster, frame, observer=observer))
                         cluster_info[-1].set_parent(match)
-                        print("Match found with worse similarity. Created new cluster with id ", cluster_num)
+                        # print("Match found with worse similarity. Created new cluster with id ", cluster_num)
 
                 #this matching old cluster has not been assigned, so assign it
                 else:
@@ -527,7 +528,7 @@ def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=
                     cluster.set_cluster_id(cluster_id)
                     label_dict[cluster_id] = [similarity, cluster]
                     
-                    print("matched cluster to existing ", cluster_id)
+                    # print("matched cluster to existing ", cluster_id)
 
 
             #if the difference is 1 or 0, same cluster or only lost one monomer
@@ -542,7 +543,7 @@ def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=
                 cluster.set_cluster_id(cluster_id)
                 label_dict[cluster_id] = [similarity, cluster]
                 
-                print("matched cluster to existing ", cluster_id)
+                # print("matched cluster to existing ", cluster_id)
 
         else:
 
@@ -553,7 +554,7 @@ def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=
             May also be able to get here if cluster merge and break at the same time. 
             '''
             
-            print("Clusters have merged")
+            # print("Clusters have merged")
 
             #get a list of possible matches, and assign a similarity to each
             possible_list   = list(possibleMatches)
@@ -565,7 +566,7 @@ def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=
                 new_not_old = set(cluster.get_body_ids()).difference(set(possible_match.get_body_ids()))
                 similarity = max(len(old_not_new), len(new_not_old))
                 # similarity = len(new_not_old)
-                print("Similarity (Merge): ", similarity)
+                # print("Similarity (Merge): ", similarity)
 
                 similarity_vals.append(similarity)
 
@@ -605,7 +606,7 @@ def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=
             if not match_flag:
 
                 #i dont think its possible to get here, but we shall see
-                print("All clusters assigned. Creating new cluster")
+                # print("All clusters assigned. Creating new cluster")
 
                 #get the new cluster id
                 cluster_num = len(cluster_info)
@@ -614,7 +615,7 @@ def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=
                 cluster.set_cluster_id(cluster_num)
                 label_dict[cluster_num] = [0, cluster]
                 cluster_info.append(ClusterInfo(cluster, frame, observer=observer))
-                print("created new (merge) cluster with id ", cluster_num)
+                # print("created new (merge) cluster with id ", cluster_num)
 
 
     #loop over the tentative updates and apply them. do monomer checking first
@@ -626,7 +627,7 @@ def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=
 
         #determine how many monomers were gained and lost from these id sets
         m_gain, m_lost = get_monomer_stats(past_ids, new_ids, old_bodies, bodies)
-        print("Monomer gain {}, Monomer loss {}".format(m_gain, m_lost))
+        # print("Monomer gain {}, Monomer loss {}".format(m_gain, m_lost))
 
         #update the monomer stats
         if m_gain > 0:
@@ -652,7 +653,7 @@ def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=
 
         #update the clusterinfo
         cluster_info[key].update_data(updated_cluster, frame)
-        print("Updated cluster {}".format(key))
+        # print("Updated cluster {}".format(key))
 
     #loop over the clusters that merged and are no longer tracked
     for update_pair in merge_updates:
@@ -664,7 +665,7 @@ def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=
         #update to cluster, but also set a death
         cluster_info[old_id].update_data(current_cluster, frame)
         cluster_info[old_id].kill(frame)
-        print("Updated and killed cluster {} (Merge)".format(old_id))
+        # print("Updated and killed cluster {} (Merge)".format(old_id))
 
 
     return clusters, cluster_info
@@ -713,10 +714,6 @@ def track_clustering(snap, sim, frame, cluster_info, old_bodies, observer=None):
     print("Frame {} updates:".format(frame))
     clusters, cluster_info = update_clusters(clusters, cluster_info, bodies, old_bodies, 
                                              frame, observer=observer)
-
-
-
-
 
     return cluster_info, bodies
     

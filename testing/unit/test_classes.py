@@ -1,7 +1,7 @@
 import os
 import pytest
 
-#add the paths to the relevant folder for testing
+#add the paths to the source code folder for testing
 import sys
 sys.path.insert(0, '../../src')
 
@@ -10,8 +10,6 @@ import numpy as np
 from body import body
 from body import neighborgrid
 from body import cluster
- 
-# tests start here
 
 def testBonds():
     #define a simple bond and test it returns the correct values
@@ -28,12 +26,14 @@ def testBonds():
     assert(ex_bond.get_cutoff() == cutoff)
     assert(ex_bond.get_name() == bond_name)
 
+    print("Bond Test Passed")
+
     return
 
-def testNeighborGrid():
+def testNeighborGrid2D():
     #test the neighborgrid on a lattice example
 
-    #define periodic 9x9x9 grid and create the neighborgrid
+    #define periodic 9x9 grid and create the neighborgrid
     lims = [[0,9],[0,9]]
     R = 1
     periodic = (1,1)
@@ -56,6 +56,8 @@ def testNeighborGrid():
     #   print("Neighbor found at {}".format(entry.get_position()))
 
     assert(len(list(ng.getNeighborhood(test_body))) == 8)
+
+    print("2D Neighborgrid Test Passed")
 
     return
 
@@ -97,6 +99,8 @@ def testBodyBind():
     bond_list = body2.get_bond_list()
     assert(bond_list[0].get_id() == 0)
     assert(len(bond_list) == 1)
+
+    print("Body Binding Test Passed")
 
 
 def testClusteringMerge():
@@ -189,6 +193,8 @@ def testClusteringSplit():
     assert(cluster_info[0].get_data()[1]['num_bodies'] == 6)
     assert(cluster_info[1].get_data()[1]['num_bodies'] == 4)
 
+    print("Split Test 1 Passed")
+
     return
 
 
@@ -226,15 +232,17 @@ def testMonomerLoss(num_mon = 1):
     #call update again
     clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 1)
 
-    print(cluster_info[0].get_data())
+    # print(cluster_info[0].get_data())
 
     assert(cluster_info[0].get_data()[0]['num_bodies'] == 10)
     assert(cluster_info[0].get_data()[1]['num_bodies'] == 10-num_mon)
 
-    print(cluster_info[0].get_monomer_loss_data())
+    # print(cluster_info[0].get_monomer_loss_data())
 
     assert(cluster_info[0].get_monomer_loss_data()[0][0]['num_bodies'] == 10)
     assert(cluster_info[0].get_monomer_loss_data()[0][1] == num_mon)
+
+    print("Monomer Loss Test {} Passed".format(num_mon))
 
     return
 
@@ -273,15 +281,17 @@ def testMonomerGain(num_mon = 1):
     #call update again
     clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 1)
 
-    print(cluster_info[0].get_data())
+    # print(cluster_info[0].get_data())
 
     assert(cluster_info[0].get_data()[0]['num_bodies'] == 10-num_mon)
     assert(cluster_info[0].get_data()[1]['num_bodies'] == 10)
 
-    print(cluster_info[0].get_monomer_gain_data())
+    # print(cluster_info[0].get_monomer_gain_data())
 
-    assert(cluster_info[0].get_monomer_gain_data()[0][0]['num_bodies'] == 10)
-    assert(cluster_info[0].get_monomer_gain_data()[0][1] == num_mon)
+    assert(cluster_info[0].get_monomer_gain_data()[-1][0]['num_bodies'] == 10)
+    assert(cluster_info[0].get_monomer_gain_data()[-1][1] == num_mon)
+
+    print("Monomer Gain Test {} Passed".format(num_mon))
 
     return
 
@@ -320,30 +330,83 @@ def testMonomerGainLoss():
     #call update again
     clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 1)
 
-    print(cluster_info[0].get_data())
+    # print(cluster_info[0].get_data())
 
     assert(cluster_info[0].get_data()[0]['num_bodies'] == 9)
     assert(cluster_info[0].get_data()[1]['num_bodies'] == 9)
 
-    print(cluster_info[0].get_monomer_gain_data())
+    # print(cluster_info[0].get_monomer_gain_data())
 
-    assert(cluster_info[0].get_monomer_gain_data()[0][0]['num_bodies'] == 9)
-    assert(cluster_info[0].get_monomer_gain_data()[0][1] == 1)
+    assert(cluster_info[0].get_monomer_gain_data()[-1][0]['num_bodies'] == 9)
+    assert(cluster_info[0].get_monomer_gain_data()[-1][1] == 1)
 
-    print(cluster_info[0].get_monomer_loss_data())
+    # print(cluster_info[0].get_monomer_loss_data())
 
     assert(cluster_info[0].get_monomer_loss_data()[0][0]['num_bodies'] == 9)
     assert(cluster_info[0].get_monomer_loss_data()[0][1] == 1)
+
+    print("Monomer Gain + Loss Test Passed")
+    return
+
+
+def testDimerization():
+    #test two monomers forming a cluster
+
+    #init arrays for storage
+    old_bodies = []
+    cluster_info = []
+
+    #create a list of 2 generic bodies
+    bodies     = []
+    for i in range(2):
+        bodies.append(body.Body([0],[0],i))
+
+    #only monomers, no clusters
+    clusters = []
+
+    #do first call on update_clusters - sets the initial cluster with id 0
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 0)
+
+    #check that there are no clusters
+    assert(len(cluster_info) == 0)
+
+    #set old bodies to bodies, make new bodies, make cluster with both bodies
+    old_bodies = bodies
+    bodies = []
+    for i in range(2):
+        bodies.append(body.Body([0],[0],i))
+
+    clusters = []
+    clusters.append(cluster.Cluster(bodies, 1))
+
+    #call update again
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 1)
+
+    #check there is a cluster with two bodies, and monomer gain data says 2
+    # print(cluster_info[0].get_data())
+
+    assert(cluster_info[0].get_data()[0]['num_bodies'] == 2)
+
+    # print(cluster_info[0].get_monomer_gain_data())
+
+    assert(cluster_info[0].get_monomer_gain_data()[0][0]['num_bodies'] == 2)
+    assert(cluster_info[0].get_monomer_gain_data()[0][1] == 2)
+
+    print("Dimerization Test Passed")
+
+    return
 
 
 
 
 if __name__ == "__main__":
 
-    # testBonds()
-    # testNeighborGrid()
-    # testBodyBind()
+    #test setup of classes for body-body interactions
+    testBonds()
+    testNeighborGrid2D()
+    testBodyBind()
 
+    #test common clustering scenarios
     testClusteringMerge()
     testClusteringSplit()
     testMonomerLoss()
@@ -351,3 +414,4 @@ if __name__ == "__main__":
     testMonomerGain()
     testMonomerGain(2)
     testMonomerGainLoss()
+    testDimerization()
