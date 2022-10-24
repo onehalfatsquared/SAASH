@@ -120,7 +120,8 @@ def testClusteringMerge():
     clusters.append(cluster.Cluster(bodies[4:10], 0))
 
     #do first call on update_clusters - sets the initial clusters with id 0 and 1
-    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 0)
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, 
+                                                     old_bodies, 0, observer)
 
     #check that there are two clusters with corresponding indices
     assert(len(cluster_info) == 2)
@@ -137,7 +138,8 @@ def testClusteringMerge():
     clusters.append(cluster.Cluster(bodies, 1))
 
     #call update again
-    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 1)
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, 
+                                                     old_bodies, 1, observer)
 
     #do check on clusterinfo
     assert(cluster_info[0].get_data()[0]['num_bodies'] == 4)
@@ -168,7 +170,8 @@ def testClusteringSplit():
     clusters.append(cluster.Cluster(bodies, 0))
 
     #do first call on update_clusters - sets the initial cluster with id 0
-    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 0)
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, 
+                                                     old_bodies, 0, observer)
 
     #check that there is one cluster with index 0
     assert(len(cluster_info) == 1)
@@ -185,7 +188,8 @@ def testClusteringSplit():
     clusters.append(cluster.Cluster(bodies[4:10], 1))
 
     #call update again
-    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 1)
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, 
+                                                     old_bodies, 1, observer)
 
     #do check on clusterinfo
     assert(cluster_info[0].get_data()[0]['num_bodies'] == 10)
@@ -214,7 +218,8 @@ def testMonomerLoss(num_mon = 1):
     clusters.append(cluster.Cluster(bodies, 0))
 
     #do first call on update_clusters - sets the initial cluster with id 0
-    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 0)
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, 
+                                                     old_bodies, 0, observer)
 
     #check that there is one cluster with index 0
     assert(len(cluster_info) == 1)
@@ -230,7 +235,8 @@ def testMonomerLoss(num_mon = 1):
     clusters.append(cluster.Cluster(bodies[0:10-num_mon], 1))
 
     #call update again
-    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 1)
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, 
+                                                     old_bodies, 1, observer)
 
     # print(cluster_info[0].get_data())
 
@@ -263,7 +269,8 @@ def testMonomerGain(num_mon = 1):
     clusters.append(cluster.Cluster(bodies[0:10-num_mon], 0))
 
     #do first call on update_clusters - sets the initial cluster with id 0
-    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 0)
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, 
+                                                     old_bodies, 0, observer)
 
     #check that there is one cluster with index 0
     assert(len(cluster_info) == 1)
@@ -279,7 +286,8 @@ def testMonomerGain(num_mon = 1):
     clusters.append(cluster.Cluster(bodies[0:10], 1))
 
     #call update again
-    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 1)
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, 
+                                                     old_bodies, 1, observer)
 
     # print(cluster_info[0].get_data())
 
@@ -312,7 +320,8 @@ def testMonomerGainLoss():
     clusters.append(cluster.Cluster(bodies[1:10], 0))
 
     #do first call on update_clusters - sets the initial cluster with id 0
-    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 0)
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, 
+                                                     old_bodies, 0, observer)
 
     #check that there is one cluster with index 0
     assert(len(cluster_info) == 1)
@@ -328,7 +337,8 @@ def testMonomerGainLoss():
     clusters.append(cluster.Cluster(bodies[0:9], 1))
 
     #call update again
-    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 1)
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, 
+                                                     old_bodies, 1, observer)
 
     # print(cluster_info[0].get_data())
 
@@ -363,9 +373,11 @@ def testDimerization():
 
     #only monomers, no clusters
     clusters = []
+    observer.current_monomer = 1
 
     #do first call on update_clusters - sets the initial cluster with id 0
-    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 0)
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, 
+                                                     old_bodies, 0, observer)
 
     #check that there are no clusters
     assert(len(cluster_info) == 0)
@@ -378,18 +390,23 @@ def testDimerization():
 
     clusters = []
     clusters.append(cluster.Cluster(bodies, 1))
+    observer.previous_monomer = observer.current_monomer
+    observer.current_monomer  = 0
 
     #call update again
-    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, old_bodies, 1)
+    clusters, cluster_info = cluster.update_clusters(clusters, cluster_info, bodies, 
+                                                     old_bodies, 1, observer)
 
     #check there is a cluster with two bodies, and monomer gain data says 2
-    # print(cluster_info[0].get_data())
+    print(cluster_info[0].get_data())
 
     assert(cluster_info[0].get_data()[0]['num_bodies'] == 2)
+    assert(cluster_info[0].get_data()[0]['monomer_fraction'] == 0)
 
-    # print(cluster_info[0].get_monomer_gain_data())
+    print(cluster_info[0].get_monomer_gain_data())
 
     assert(cluster_info[0].get_monomer_gain_data()[0][0]['num_bodies'] == 2)
+    assert(cluster_info[0].get_monomer_gain_data()[0][0]['monomer_fraction'] == 1)
     assert(cluster_info[0].get_monomer_gain_data()[0][1] == 2)
 
     print("Dimerization Test Passed")
@@ -405,6 +422,10 @@ if __name__ == "__main__":
     testBonds()
     testNeighborGrid2D()
     testBodyBind()
+
+    #set a common observer for testing
+    observer = cluster.Observer('')
+    observer.add_observable('num_bodies')
 
     #test common clustering scenarios
     testClusteringMerge()

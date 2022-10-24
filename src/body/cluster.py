@@ -3,14 +3,18 @@
 This file contains class implementations for creating and tracking clusters of bodies 
 between simulation frames. 
 
-A cluster is simply an indexed collection of bodies. 
+A cluster is simply an indexed collection of at least two bodies. 
 
 For each cluster that forms, a ClusterInfo object is created. This keeps track of birth
 and death frames of a cluster and keeps a time series of cluster properties that the user 
-can choose from. 
+can choose from. Among these is the monomer fraction, which is always tracked, in order
+to build statistics on transitions as a function of monomer concentration. 
 
-Monomer concentration note... 
-
+There is also an observer class that can be set with various quantities to compute for 
+each cluster. Examples include number of bodies, number of bonds, positions of bodies, 
+a canonical graph labeling, etc. The ClusterInfo takes the observer and reads the 
+requested quantities. The ClusterInfo time series then contains a dictionary with these 
+values at every logged frame. 
 
 '''
 
@@ -46,7 +50,10 @@ class Cluster:
     def update(self, cluster):
         #update a cluster with up to date member bodies
 
+        #set the body list to match given cluster. 
         self.__bodies = cluster.get_bodies()
+
+        #Update those bodies with this cluster id
         self.__update_bodies(self.__bodies)
 
         #update the frame of the last update
@@ -94,19 +101,9 @@ class Cluster:
             bod.set_cluster_id(self, self.__cluster_index)
 
 
-
-
-
-
-
-
-
-
-
-
 class ClusterInfo:
 
-    def __init__(self, cluster, frame, observer = None):
+    def __init__(self, cluster, frame, observer):
 
         #init information about birth and death frame for this cluster
         self.__birth_frame  = frame
@@ -121,13 +118,12 @@ class ClusterInfo:
 
         #init storage for observed variables
         self.__stored_data = []
-        self.update_data(cluster, frame)
+        self.update_data(cluster, frame, observer.current_monomer)
 
         #init storage for monomer stats
         self.__from_monomer = []
         self.__to_monomer   = []
 
-        #todo - something about free monomer concentration
 
         #todo - check that timescale gives number of entries in data. 
         #may need to offset this by 1, since counting starts at 0
@@ -153,19 +149,31 @@ class ClusterInfo:
 
         return
 
-    def update_data(self, cluster, frame):
+    def update_data(self, cluster, frame, monomer_frac):
         #append the current cluster's coordinate data to storage
 
         if (frame > self.__last_updated and not self.__is_dead):
+
+            #compute a dictionary of requested values using this cluster
             self.__stored_data.append(self.__compute_coordinate(cluster))
+
+            #append the monomer fraction when this cluster formed
+            self.__stored_data[-1]['monomer_fraction'] = monomer_frac
+
+            #updated the time of last update to current frame
             self.__last_updated = frame
 
         return
 
-    def add_monomers(self, cluster, num_monomers):
+    def add_monomers(self, cluster, num_monomers, monomer_frac):
         #update the from_monomer list to denote a transition from monomer to cluster
 
+        #compute a dictionary of requested values using this cluster
         self.__from_monomer.append((self.__compute_coordinate(cluster), num_monomers))
+
+        #append the monomer fraction from previous timestep of cluster formation
+        self.__from_monomer[-1][0]['monomer_fraction'] = monomer_frac
+
         return
 
     def remove_monomers(self, cluster, num_monomers):
@@ -205,33 +213,28 @@ class ClusterInfo:
         '''this computes various observables for the cluster, based on user input
            given to the observer class. Default is simply number of bodies'''
 
+
+           #move computation of properties to the observer class
+
         #init a dict to store properties of the cluster
         property_dict = dict()
 
-        #check if there is an observer. if not, default to number of bodies
-        if self.__observer is None:
+        #get the list of observables requested, and compute them from cluster
+        observables = self.__observer.get_observables()
+        for obs in observables:
 
-            property_dict['num_bodies'] = len(cluster.get_bodies())
+            if obs == "num_bodies":
 
-        #if there is an observer, compute all requested properties
-        else:
+                property_dict['num_bodies'] = len(cluster.get_bodies())
 
-            observables = self.__observer.get_observables()
+            elif obs == "positions":
 
-            for obs in observables:
+                property_dict['positions'] = cluster.get_body_positions()
 
-                if obs == "num_bodies":
+            else:
 
-                    property_dict['num_bodies'] = len(cluster.get_bodies())
-
-                elif obs == "positions":
-
-                    property_dict['positions'] = cluster.get_body_positions()
-
-                else:
-
-                    raise("The requested property is not implemented. Check that it is"\
-                        " implemented and spelled correctly")
+                raise("The requested property is not implemented. Check that it is"\
+                    " implemented and spelled correctly")
 
 
             
@@ -253,8 +256,12 @@ class Observer:
         #todo - determine obersvables fromm an input file
 
 
-        #init a set of observables to compute
+        #init a set of observables to compute. Always add monomer fraction
         self.__observable_set = set()
+
+        #init variables for current and previous monomer fractions
+        self.current_monomer  = -1
+        self.previous_monomer = -1
 
 
 
@@ -299,7 +306,7 @@ def get_groups(bond_dict):
 
     #init a queue and dump for searching bonds
     queue    = [0]
-    searched = []
+    searched = []  #init to flase * N_bod. Index instead of searching this list
 
     #loop over the queue until it is empty and all bonds have been assigned
     while len(queue) > 0:
@@ -412,11 +419,11 @@ def get_monomer_stats(old_ids, new_ids, old_bodies, new_bodies):
 
 
 
-def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=None):
+def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer):
     #use the existing clusters to assign an id and update cluster
 
     #make a queue for the new clusters and dict to store the mappings
-    queue = [cluster for cluster in clusters]
+    queue = [cluster for cluster in clusters] #TODO change to list.copy()
     label_dict = dict()
 
     #make a list to store death updates for merging - entries (dying id, new cluster id)
@@ -448,8 +455,11 @@ def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=
             #update the cluster with the new id, add entry to cluster_info
             cluster.set_cluster_id(cluster_num)
             label_dict[cluster_num] = [0, cluster]
-            cluster_info.append(ClusterInfo(cluster, frame, observer=observer))
-            cluster_info[cluster_num].add_monomers(cluster, len(cluster.get_bodies()))
+            cluster_info.append(ClusterInfo(cluster, frame, observer))
+
+            num_bodies = len(cluster.get_bodies())
+            monomer_frac = observer.previous_monomer
+            cluster_info[cluster_num].add_monomers(cluster, num_bodies, monomer_frac)
             # print("created new cluster with id ", cluster_num)
 
         elif len(possibleMatches) == 1:
@@ -483,10 +493,12 @@ def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=
             if len(old_not_new) > 1:
 
                 #check if this match has been assigned already
-                if match_id in label_dict.keys():
+                if match_id in label_dict: #removed .keys() in case this breaks
 
                     #check if the current similarity score is better 
                     if similarity < label_dict[match_id][0]:
+
+                        #TODO implement a steal id that pops the id and sets it to -1
 
                         #current cluster is more similar to match. overwrite old cluster
                         old_cluster = label_dict[match_id][1]
@@ -512,7 +524,7 @@ def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=
                         #update the cluster with the new id, add entry to cluster_info
                         cluster.set_cluster_id(cluster_num)
                         label_dict[cluster_num] = [0, cluster]
-                        cluster_info.append(ClusterInfo(cluster, frame, observer=observer))
+                        cluster_info.append(ClusterInfo(cluster, frame, observer))
                         cluster_info[-1].set_parent(match)
                         # print("Match found with worse similarity. Created new cluster with id ", cluster_num)
 
@@ -583,7 +595,7 @@ def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=
                 #check if match not already assigned. If not, assign it. 
                 match_id = possibility.get_cluster_id()
                 if (not match_flag):
-                    if (match_id not in label_dict.keys()):
+                    if (match_id not in label_dict): #removed .keys() in case things break
 
                         # possibility.update(cluster)
                         tentative_updates[possibility] = cluster
@@ -614,7 +626,7 @@ def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=
                 #update the cluster with the new id, add entry to cluster_info
                 cluster.set_cluster_id(cluster_num)
                 label_dict[cluster_num] = [0, cluster]
-                cluster_info.append(ClusterInfo(cluster, frame, observer=observer))
+                cluster_info.append(ClusterInfo(cluster, frame, observer))
                 # print("created new (merge) cluster with id ", cluster_num)
 
 
@@ -633,7 +645,8 @@ def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=
         if m_gain > 0:
 
             cluster_id = key.get_cluster_id()
-            cluster_info[cluster_id].add_monomers(tentative_updates[key], m_gain)
+            monomer_frac = observer.previous_monomer
+            cluster_info[cluster_id].add_monomers(tentative_updates[key], m_gain, monomer_frac)
 
         if m_lost > 0:
 
@@ -652,7 +665,7 @@ def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=
         updated_cluster = label_dict[key][1]
 
         #update the clusterinfo
-        cluster_info[key].update_data(updated_cluster, frame)
+        cluster_info[key].update_data(updated_cluster, frame, observer.current_monomer)
         # print("Updated cluster {}".format(key))
 
     #loop over the clusters that merged and are no longer tracked
@@ -663,7 +676,7 @@ def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=
         current_cluster = label_dict[current_id][1]
 
         #update to cluster, but also set a death
-        cluster_info[old_id].update_data(current_cluster, frame)
+        cluster_info[old_id].update_data(current_cluster, frame, observer.current_monomer)
         cluster_info[old_id].kill(frame)
         # print("Updated and killed cluster {} (Merge)".format(old_id))
 
@@ -673,7 +686,7 @@ def update_clusters(clusters, cluster_info, bodies, old_bodies, frame, observer=
 
 
 
-def track_clustering(snap, sim, frame, cluster_info, old_bodies, observer=None):
+def track_clustering(snap, sim, frame, cluster_info, old_bodies, observer):
     #compute and update cluster stats from the given frame
 
     #get a list of bodies to analyze
@@ -709,11 +722,15 @@ def track_clustering(snap, sim, frame, cluster_info, old_bodies, observer=None):
     #set the monomer fraction
     monomer_frac = num_monomers / len(bodies)
     print(monomer_frac)
+    observer.current_monomer = monomer_frac
 
     #map the clusters from previous timestep to this step to assign labels
     print("Frame {} updates:".format(frame))
     clusters, cluster_info = update_clusters(clusters, cluster_info, bodies, old_bodies, 
-                                             frame, observer=observer)
+                                             frame, observer)
 
+    #update the previous monomer frac
+    observer.previous_monomer = monomer_frac
+
+    #return updated cluster info and the bodies to be used as old_bodies next frame
     return cluster_info, bodies
-    

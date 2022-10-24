@@ -203,7 +203,14 @@ def run_and_plot_clusters():
                                                                 observer=observer)
 
     #grab coordinates from a test cluster to plot in time
-    test_cluster = 14
+    longest_traj = 0
+    longest_id   = -1
+    for i in range(len(cluster_info)):
+        if len(cluster_info[i].get_data()) > longest_traj:
+            longest_traj = len(cluster_info[i].get_data())
+            longest_id = i
+
+    test_cluster = longest_id
     cluster_data = cluster_info[test_cluster].get_data()
     test_coordinates = []
     for i in range(len(cluster_data)):
@@ -258,10 +265,10 @@ if __name__ == "__main__":
     # get_ex_particle_info(gsd_file, ixn_file, 500)
     # test_distance()
     # test_subunit_size(gsd_file, ixn_file, 5)
-    test.run_analysis(gsd_file, ixn_file = ixn_file)
+    # test.run_analysis(gsd_file, ixn_file = ixn_file)
 
     #plot clustering test
-    # run_and_plot_clusters()
+    run_and_plot_clusters()
 
 
 

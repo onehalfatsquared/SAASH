@@ -492,7 +492,7 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
             # q = analyze_structures(snap, sim)
             cluster_info, old_bodies = cluster.track_clustering(snap, sim, frame, 
                                                                 cluster_info, old_bodies,
-                                                                observer=observer)
+                                                                observer)
 
         else:
             q = []
