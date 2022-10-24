@@ -31,7 +31,12 @@ from body import neighborgrid as ng
 from body import body as body
 
 
+class Frame:
 
+    def __init__(self):
+
+        self.__clusters = []
+        self.__bodies   = []
 
 class Cluster:
 
