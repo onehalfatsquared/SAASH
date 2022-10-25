@@ -137,6 +137,7 @@ class Frame:
 
                 #determine similarity between match and cluster. determine if split possible
                 similarity, sub_event = self.get_similarity(match, cluster)
+                print(sub_event)
 
                 if sub_event == Event.SPLIT:
                     #if two or more particles split from the cluster. Find best match
@@ -193,7 +194,7 @@ class Frame:
 
 
                 #if the difference is 1 or 0, same cluster or only lost one monomer
-                elif (event == Event.PERSIST):
+                elif (sub_event == Event.PERSIST):
 
                     #update the old cluster with new. This sets the old_bodies references to cluster
                     #match.update(cluster)
