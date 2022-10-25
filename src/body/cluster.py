@@ -48,6 +48,9 @@ class Frame:
         #init a dictionary that stores which id gets mapped to which cluster
         self.__label_dict = dict()
 
+        #init a dictionary that stores which old clusters update to new ones
+        self.__updates    = dict()
+
         #init the clusters and bodies lists
         self.__clusters   = clusters
         self.__bodies     = bodies
@@ -63,7 +66,11 @@ class Frame:
         for orig_cluster in self.__clusters:
 
             self.__add_new_cluster(cluster_info, orig_cluster, frame_num,  
-                                   self.__monomer_frac, 1, observer)
+                                   self.__monomer_frac, observer)
+
+            #do computations inolving monomers
+            num_bodies = len(orig_cluster.get_bodies())
+            cluster_info[-1].add_monomers(orig_cluster, num_bodies, 1)
 
         return
 
@@ -85,6 +92,82 @@ class Frame:
 
         return similarity, event
 
+    def __assign_match(self, cluster, match, similarity):
+        #assign cluster to its match in the previous frame. update relevant dict entries
+
+        #grab the cluster id and set it for the new cluster
+        cluster_id = match.get_cluster_id()
+        cluster.set_cluster_id(cluster_id)
+
+        #update the update and label dicts
+        self.__updates[match] = cluster
+        self.__label_dict[cluster_id] = [similarity, cluster]
+
+        return
+
+    def __assign_better_match(self, cluster, match, similarity):
+        #cluster is closer to match than theft victim. steal ids and update dicts
+
+        match_id = match.get_cluster_id()
+
+        #current cluster is more similar to match. overwrite old cluster
+        theft_victim = self.__label_dict[match_id][1]
+        cluster.steal_id(theft_victim)
+
+        #overwrite entries to the update and label dicts
+        self.__updates[match] = cluster
+        self.__label_dict[match_id] = [similarity, cluster]
+
+        #return the theft victim
+        return theft_victim
+
+
+    def __handle_split(self, match, cluster, similarity, cluster_info, observer):
+        '''
+        If a cluster splits, determine the best match as the one most similar to the
+        original. It is possible for a match to be assigned, but a better one to be found 
+        later, in which case we steal the ID from the previous match and return a flag
+        to add the old match back to the queue.
+        '''
+
+        #set frame num and monomer frac
+        frame_num = self.get_frame_num()
+        current_monomer = self.get_monomer_fraction()
+
+        #get the id for the matched cluster
+        match_id = match.get_cluster_id()
+
+        #check if this match has been assigned already
+        if match_id in self.__label_dict:
+
+            #check if the current similarity score is better 
+            if similarity < self.__label_dict[match_id][0]:
+
+                theft_victim = self.__assign_better_match(cluster, match, similarity)
+                # print("Better match found. Updated cluster match to ", match_id)
+
+                #return the old cluster for reassignment to the queue
+                return theft_victim
+
+            #if similarity is worse, assign a new cluster
+            else: 
+
+                self.__add_new_cluster(cluster_info, cluster, frame_num,  
+                                       self.__monomer_frac, observer)
+
+                #when splitting, set the parent to be the matched cluster
+                cluster_info[-1].set_parent(match)
+                # print("Match found with worse similarity. Created new cluster with id ", cluster_num)
+
+        #this matching old cluster has not been assigned, so assign it
+        else:
+
+            self.__assign_match(cluster, match, similarity)
+            # print("matched cluster to existing ", cluster_id)
+
+
+        return None
+
 
 
 
@@ -97,9 +180,6 @@ class Frame:
 
         #make a list to store death updates for merging - entries (dying id, new cluster id)
         merge_updates = []
-
-        #make a dict to store tentative updates during the matching. Apply at the end
-        tentative_updates = dict()
 
         #get required data from current and previous frame
         prev_monomer = old_frame.get_monomer_fraction()
@@ -126,84 +206,36 @@ class Frame:
                 #create a new cluster and append to cluster_info
 
                 self.__add_new_cluster(cluster_info, cluster, frame_num,  
-                                       current_monomer, prev_monomer, observer)
+                                       current_monomer, observer)
+
+                #augment with monomer addition info
+                num_bodies = len(cluster.get_bodies())
+                cluster_info[-1].add_monomers(cluster, num_bodies, 1)
 
             elif (event == Event.POSSIBLE_SPLIT):
                 #clusters have possibly split. perform matching if they have
                
-                #get the match and get its cluster id
+                #extract the matching cluster from possibilities list
                 match = list(possibleMatches)[0]
-                match_id = match.get_cluster_id()
 
                 #determine similarity between match and cluster. determine if split possible
                 similarity, sub_event = self.get_similarity(match, cluster)
                 print(sub_event)
 
-                if sub_event == Event.SPLIT:
+                if (sub_event == Event.SPLIT):
                     #if two or more particles split from the cluster. Find best match
 
-                    #check if this match has been assigned already
-                    if match_id in self.__label_dict: #removed .keys() in case this breaks
-
-                        #check if the current similarity score is better 
-                        if similarity < self.__label_dict[match_id][0]:
-
-                            #TODO implement a steal id that pops the id and sets it to -1
-
-                            #current cluster is more similar to match. overwrite old cluster
-                            old_cluster = self.__label_dict[match_id][1]
-                            old_cluster.set_cluster_id(-1)
-
-                            #set label for the new cluster
-                            #match.update(cluster)
-                            tentative_updates[match] = cluster
-                            cluster.set_cluster_id(match_id)
-                            self.__label_dict[match_id] = [similarity, cluster]
-
-                            # print("Better match found. Updated cluster match to ", match_id)
-
-                            #add the old cluster to the queue for reassignment
-                            queue.append(old_cluster)
-
-                        #if not, assign a new cluster
-                        else: 
-
-                            #get the new cluster id
-                            cluster_num = len(cluster_info)
-
-                            #update the cluster with the new id, add entry to cluster_info
-                            cluster.set_cluster_id(cluster_num)
-                            self.__label_dict[cluster_num] = [0, cluster]
-                            cluster_info.append(ClusterInfo(cluster, frame_num, current_monomer, observer))
-                            cluster_info[-1].set_parent(match)
-                            # print("Match found with worse similarity. Created new cluster with id ", cluster_num)
-
-                    #this matching old cluster has not been assigned, so assign it
-                    else:
-
-                        #update the old cluster with new. This sets the old_bodies references to cluster
-                        #match.update(cluster)
-                        tentative_updates[match] = cluster
-
-                        #grab the cluster id and set it for the new cluster
-                        cluster_id = match.get_cluster_id()
-                        cluster.set_cluster_id(cluster_id)
-                        self.__label_dict[cluster_id] = [similarity, cluster]
-                        
-                        # print("matched cluster to existing ", cluster_id)
+                    to_queue = self.__handle_split(match, cluster, similarity, 
+                                                   cluster_info, observer)
+                    if (to_queue is not None):
+                        queue.append(to_queue)
 
 
                 #if the difference is 1 or 0, same cluster or only lost one monomer
                 elif (sub_event == Event.PERSIST):
 
-                    #update the old cluster with new. This sets the old_bodies references to cluster
-                    #match.update(cluster)
-                    tentative_updates[match] = cluster
-
-                    #grab the cluster id and set it for the new cluster
-                    cluster_id = match.get_cluster_id()
-                    cluster.set_cluster_id(cluster_id)
-                    self.__label_dict[cluster_id] = [similarity, cluster]
+                    #assign match to cluster
+                    self.__assign_match(cluster, match, similarity)
                     
                     # print("matched cluster to existing ", cluster_id)
 
@@ -242,7 +274,7 @@ class Frame:
                         if (match_id not in self.__label_dict): #removed .keys() in case things break
 
                             # possibility.update(cluster)
-                            tentative_updates[possibility] = cluster
+                            self.__updates[possibility] = cluster
 
                             #set id for the new cluster
                             cluster.set_cluster_id(match_id)
@@ -275,11 +307,11 @@ class Frame:
 
 
         #loop over the tentative updates and apply them. do monomer checking first
-        for key in tentative_updates.keys():
+        for key in self.__updates.keys():
 
             #get lists of the body ids in the pre and post update clusters
             past_ids = set(key.get_body_ids())
-            new_ids  = set(tentative_updates[key].get_body_ids())
+            new_ids  = set(self.__updates[key].get_body_ids())
 
             #determine how many monomers were gained and lost from these id sets
             m_gain, m_lost = get_monomer_stats(past_ids, new_ids, old_bodies, bodies)
@@ -290,7 +322,7 @@ class Frame:
 
                 cluster_id = key.get_cluster_id()
                 monomer_frac = observer.previous_monomer
-                cluster_info[cluster_id].add_monomers(tentative_updates[key], m_gain, monomer_frac)
+                cluster_info[cluster_id].add_monomers(self.__updates[key], m_gain, monomer_frac)
 
             if m_lost > 0:
 
@@ -299,7 +331,7 @@ class Frame:
 
 
             #perform the update on the cluster
-            key.update(tentative_updates[key])
+            key.update(self.__updates[key])
 
         #loop over the now matched clusters and update the cluster_info
         #(can loop over all keys in the label_dict to avoid unnec work)
@@ -385,8 +417,7 @@ class Frame:
             return Event.MERGE
 
 
-    def __add_new_cluster(self, cluster_info, cluster, frame_num, 
-                          current_monomer, prev_monomer, observer):
+    def __add_new_cluster(self, cluster_info, cluster, frame_num, current_monomer, observer):
         #create new cluster and append it to cluster info
 
         #get the id number for the new cluster by looking at length of cluster info
@@ -397,9 +428,6 @@ class Frame:
         self.__label_dict[cluster_num] = [0, cluster]
         cluster_info.append(ClusterInfo(cluster, frame_num, current_monomer, observer))
 
-        #do computations inolving monomers
-        num_bodies = len(cluster.get_bodies())
-        cluster_info[cluster_num].add_monomers(cluster, num_bodies, prev_monomer)
         # print("created new cluster with id ", cluster_num)
 
         return
@@ -467,6 +495,14 @@ class Cluster:
 
         self.__cluster_index = c_id
         self.__update_bodies(self.__bodies)
+
+        return
+
+    def steal_id(self, victim):
+        #take the cluster id from victim cluster, set it for yourself, leave victim with -1
+
+        self.set_cluster_id(victim.get_cluster_id())
+        victim.set_cluster_id(-1)
 
         return
 
