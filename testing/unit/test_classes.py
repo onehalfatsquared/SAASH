@@ -10,6 +10,7 @@ import numpy as np
 from body import body
 from body import neighborgrid
 from body import cluster
+from body import frame
 
 def testBonds():
     #define a simple bond and test it returns the correct values
@@ -120,7 +121,7 @@ def testClusteringMerge():
     clusters.append(cluster.Cluster(bodies[4:10], 0))
 
     #create the first frame with this info
-    f0 = cluster.Frame(bodies, clusters, 0, 0)
+    f0 = frame.Frame(bodies, clusters, 0, 0)
     f0.create_first_frame(cluster_info, 0, observer)
 
     #check that there are two clusters with corresponding indices
@@ -138,7 +139,7 @@ def testClusteringMerge():
     clusters.append(cluster.Cluster(bodies, 1))
 
     #create next frame and do an update
-    f1 = cluster.Frame(bodies, clusters, 1, 0)
+    f1 = frame.Frame(bodies, clusters, 1, 0)
     f1.update(cluster_info, f0, observer)
 
     #do check on clusterinfo
@@ -170,7 +171,7 @@ def testClusteringSplit():
     clusters.append(cluster.Cluster(bodies, 0))
 
     #create the first frame with this info
-    f0 = cluster.Frame(bodies, clusters, 0, 0)
+    f0 = frame.Frame(bodies, clusters, 0, 0)
     f0.create_first_frame(cluster_info, 0, observer)
 
     #check that there is one cluster with index 0
@@ -188,7 +189,7 @@ def testClusteringSplit():
     clusters.append(cluster.Cluster(bodies[4:10], 1))
 
     #create next frame and do an update
-    f1 = cluster.Frame(bodies, clusters, 1, 0)
+    f1 = frame.Frame(bodies, clusters, 1, 0)
     f1.update(cluster_info, f0, observer)
 
     #do check on clusterinfo
@@ -218,7 +219,7 @@ def testMonomerLoss(num_mon = 1):
     clusters.append(cluster.Cluster(bodies, 0))
 
     #create the first frame with this info
-    f0 = cluster.Frame(bodies, clusters, 0, 0)
+    f0 = frame.Frame(bodies, clusters, 0, 0)
     f0.create_first_frame(cluster_info, 0, observer)
 
     #check that there is one cluster with index 0
@@ -236,7 +237,7 @@ def testMonomerLoss(num_mon = 1):
 
     #call update again
     #create next frame and do an update
-    f1 = cluster.Frame(bodies, clusters, 1, num_mon/10)
+    f1 = frame.Frame(bodies, clusters, 1, num_mon/10)
     f1.update(cluster_info, f0, observer)
 
     # print(cluster_info[0].get_data())
@@ -269,7 +270,7 @@ def testMonomerGain(num_mon = 1):
     clusters = []
     clusters.append(cluster.Cluster(bodies[0:10-num_mon], 0))
 
-    f0 = cluster.Frame(bodies, clusters, 0, num_mon/10)
+    f0 = frame.Frame(bodies, clusters, 0, num_mon/10)
     f0.create_first_frame(cluster_info, 0, observer)
 
     #check that there is one cluster with index 0
@@ -286,7 +287,7 @@ def testMonomerGain(num_mon = 1):
     clusters.append(cluster.Cluster(bodies[0:10], 1))
 
     #call update again
-    f1 = cluster.Frame(bodies, clusters, 1, 0)
+    f1 = frame.Frame(bodies, clusters, 1, 0)
     f1.update(cluster_info, f0, observer)
 
     # print(cluster_info[0].get_data())
@@ -320,7 +321,7 @@ def testMonomerGainLoss():
     clusters.append(cluster.Cluster(bodies[1:10], 0))
 
     #do first call on update_clusters - sets the initial cluster with id 0
-    f0 = cluster.Frame(bodies, clusters, 0, 0.1)
+    f0 = frame.Frame(bodies, clusters, 0, 0.1)
     f0.create_first_frame(cluster_info, 0, observer)
 
     #check that there is one cluster with index 0
@@ -337,7 +338,7 @@ def testMonomerGainLoss():
     clusters.append(cluster.Cluster(bodies[0:9], 1))
 
     #call update again
-    f1 = cluster.Frame(bodies, clusters, 1, 0.1)
+    f1 = frame.Frame(bodies, clusters, 1, 0.1)
     f1.update(cluster_info, f0, observer)
 
     # print(cluster_info[0].get_data())
@@ -375,7 +376,7 @@ def testDimerization():
     clusters = []
 
     #do first call on update_clusters - sets the initial cluster with id 0
-    f0 = cluster.Frame(bodies, clusters, 0, 1)
+    f0 = frame.Frame(bodies, clusters, 0, 1)
     f0.create_first_frame(cluster_info, 0, observer)
 
     #check that there are no clusters
@@ -391,16 +392,16 @@ def testDimerization():
     clusters.append(cluster.Cluster(bodies, 1))
 
     #call update again
-    f1 = cluster.Frame(bodies, clusters, 1, 0)
+    f1 = frame.Frame(bodies, clusters, 1, 0)
     f1.update(cluster_info, f0, observer)
 
     #check there is a cluster with two bodies, and monomer gain data says 2
-    print(cluster_info[0].get_data())
+    # print(cluster_info[0].get_data())
 
     assert(cluster_info[0].get_data()[0]['num_bodies'] == 2)
     assert(cluster_info[0].get_data()[0]['monomer_fraction'] == 0)
 
-    print(cluster_info[0].get_monomer_gain_data())
+    # print(cluster_info[0].get_monomer_gain_data())
 
     assert(cluster_info[0].get_monomer_gain_data()[0][0]['num_bodies'] == 2)
     assert(cluster_info[0].get_monomer_gain_data()[0][0]['monomer_fraction'] == 1)

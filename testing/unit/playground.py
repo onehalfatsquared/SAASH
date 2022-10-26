@@ -26,6 +26,7 @@ import time
 from body import body
 from body import neighborgrid
 from body import cluster
+from body import frame
 import analyzeStructures_refactor as test
 import analyzeStructures as original
 
@@ -187,20 +188,23 @@ def run_and_plot_clusters():
     cluster_info  = []
     old_bodies    = []
 
+    old_frame = frame.get_data_from_snap(snaps.read_frame(0), sim, 0)
+    old_frame.create_first_frame(cluster_info, 0, observer)
+
     #loop over each frame and perform the analysis
     max_frame = 400
-    for frame in range(0, max_frame, jump):
+    for frame_num in range(1, max_frame, jump):
 
         #print message to user about frame num
-        print("Analyzing frame ", frame)
+        print("Analyzing frame ", frame_num)
 
         #get the snapshot for the current frame
-        snap = snaps.read_frame(frame)
+        snap = snaps.read_frame(frame_num)
 
         #do the cluster tracking
-        cluster_info, old_bodies = cluster.track_clustering(snap, sim, frame, 
-                                                                cluster_info, old_bodies,
-                                                                observer=observer)
+        cluster_info, old_frame = cluster.track_clustering(snap, sim, frame_num, 
+                                                           cluster_info, old_frame,
+                                                           observer)
 
     #grab coordinates from a test cluster to plot in time
     longest_traj = 0
@@ -265,10 +269,10 @@ if __name__ == "__main__":
     # get_ex_particle_info(gsd_file, ixn_file, 500)
     # test_distance()
     # test_subunit_size(gsd_file, ixn_file, 5)
-    test.run_analysis(gsd_file, ixn_file = ixn_file)
+    # test.run_analysis(gsd_file, ixn_file = ixn_file)
 
     #plot clustering test
-    # run_and_plot_clusters()
+    run_and_plot_clusters()
 
 
 
