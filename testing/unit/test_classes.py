@@ -247,8 +247,8 @@ def testMonomerLoss(num_mon = 1):
 
     # print(cluster_info[0].get_monomer_loss_data())
 
-    assert(cluster_info[0].get_monomer_loss_data()[0][0]['num_bodies'] == 10)
-    assert(cluster_info[0].get_monomer_loss_data()[0][1] == num_mon)
+    assert(cluster_info[0].get_monomer_loss_data()[1]['num_bodies'] == 10)
+    assert(cluster_info[0].get_monomer_loss_data()[1]['num_monomers'] == num_mon)
 
     print("Monomer Loss Test {} Passed".format(num_mon))
 
@@ -270,7 +270,7 @@ def testMonomerGain(num_mon = 1):
     clusters = []
     clusters.append(cluster.Cluster(bodies[0:10-num_mon], 0))
 
-    f0 = frame.Frame(bodies, clusters, 0, num_mon/10)
+    f0 = frame.Frame(bodies, clusters, 0, [10], num_mon/10)
     f0.create_first_frame(cluster_info, 0, observer)
 
     #check that there is one cluster with index 0
@@ -287,7 +287,7 @@ def testMonomerGain(num_mon = 1):
     clusters.append(cluster.Cluster(bodies[0:10], 1))
 
     #call update again
-    f1 = frame.Frame(bodies, clusters, 1, 0)
+    f1 = frame.Frame(bodies, clusters, 1, [], 0)
     f1.update(cluster_info, f0, observer)
 
     # print(cluster_info[0].get_data())
@@ -297,8 +297,8 @@ def testMonomerGain(num_mon = 1):
 
     # print(cluster_info[0].get_monomer_gain_data())
 
-    assert(cluster_info[0].get_monomer_gain_data()[-1][0]['num_bodies'] == 10)
-    assert(cluster_info[0].get_monomer_gain_data()[-1][1] == num_mon)
+    assert(cluster_info[0].get_monomer_gain_data()[1]['num_bodies'] == 10)
+    assert(cluster_info[0].get_monomer_gain_data()[1]['num_monomers'] == num_mon)
 
     print("Monomer Gain Test {} Passed".format(num_mon))
 
@@ -321,7 +321,7 @@ def testMonomerGainLoss():
     clusters.append(cluster.Cluster(bodies[1:10], 0))
 
     #do first call on update_clusters - sets the initial cluster with id 0
-    f0 = frame.Frame(bodies, clusters, 0, 0.1)
+    f0 = frame.Frame(bodies, clusters, 0, [0], 0.1)
     f0.create_first_frame(cluster_info, 0, observer)
 
     #check that there is one cluster with index 0
@@ -338,7 +338,7 @@ def testMonomerGainLoss():
     clusters.append(cluster.Cluster(bodies[0:9], 1))
 
     #call update again
-    f1 = frame.Frame(bodies, clusters, 1, 0.1)
+    f1 = frame.Frame(bodies, clusters, 1, [10], 0.1)
     f1.update(cluster_info, f0, observer)
 
     # print(cluster_info[0].get_data())
@@ -348,13 +348,13 @@ def testMonomerGainLoss():
 
     # print(cluster_info[0].get_monomer_gain_data())
 
-    assert(cluster_info[0].get_monomer_gain_data()[-1][0]['num_bodies'] == 9)
-    assert(cluster_info[0].get_monomer_gain_data()[-1][1] == 1)
+    assert(cluster_info[0].get_monomer_gain_data()[1]['num_bodies'] == 9)
+    assert(cluster_info[0].get_monomer_gain_data()[1]['num_monomers'] == 1)
 
     # print(cluster_info[0].get_monomer_loss_data())
 
-    assert(cluster_info[0].get_monomer_loss_data()[0][0]['num_bodies'] == 9)
-    assert(cluster_info[0].get_monomer_loss_data()[0][1] == 1)
+    assert(cluster_info[0].get_monomer_loss_data()[1]['num_bodies'] == 9)
+    assert(cluster_info[0].get_monomer_loss_data()[1]['num_monomers'] == 1)
 
     print("Monomer Gain + Loss Test Passed")
     return
@@ -376,7 +376,7 @@ def testDimerization():
     clusters = []
 
     #do first call on update_clusters - sets the initial cluster with id 0
-    f0 = frame.Frame(bodies, clusters, 0, 1)
+    f0 = frame.Frame(bodies, clusters, 0, [0,1], 1)
     f0.create_first_frame(cluster_info, 0, observer)
 
     #check that there are no clusters
@@ -392,7 +392,7 @@ def testDimerization():
     clusters.append(cluster.Cluster(bodies, 1))
 
     #call update again
-    f1 = frame.Frame(bodies, clusters, 1, 0)
+    f1 = frame.Frame(bodies, clusters, 1, [], 0)
     f1.update(cluster_info, f0, observer)
 
     #check there is a cluster with two bodies, and monomer gain data says 2
@@ -403,9 +403,9 @@ def testDimerization():
 
     # print(cluster_info[0].get_monomer_gain_data())
 
-    assert(cluster_info[0].get_monomer_gain_data()[0][0]['num_bodies'] == 2)
-    assert(cluster_info[0].get_monomer_gain_data()[0][0]['monomer_fraction'] == 1)
-    assert(cluster_info[0].get_monomer_gain_data()[0][1] == 2)
+    assert(cluster_info[0].get_monomer_gain_data()[1]['num_bodies'] == 2)
+    assert(cluster_info[0].get_monomer_gain_data()[1]['monomer_fraction'] == 1)
+    assert(cluster_info[0].get_monomer_gain_data()[1]['num_monomers'] == 2)
 
     print("Dimerization Test Passed")
 

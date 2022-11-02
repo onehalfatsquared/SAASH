@@ -500,6 +500,7 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
             cluster_info, old_frame = cluster.track_clustering(snap, sim, frame_num, 
                                                                 cluster_info, old_frame,
                                                                 observer)
+            print(old_frame.get_monomer_ids())
 
         else:
             q = []

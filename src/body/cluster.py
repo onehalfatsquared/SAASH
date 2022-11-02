@@ -156,8 +156,8 @@ class ClusterInfo:
         self.update_data(cluster, frame_num, monomer_frac)
 
         #init storage for monomer stats
-        self.__from_monomer = []
-        self.__to_monomer   = []
+        self.__from_monomer = dict()
+        self.__to_monomer   = dict()
 
 
         #todo - check that timescale gives number of entries in data. 
@@ -200,21 +200,28 @@ class ClusterInfo:
 
         return
 
-    def add_monomers(self, cluster, num_monomers, monomer_frac):
+    def add_monomers(self, cluster, frame_num, num_monomers, monomer_frac):
         #update the from_monomer list to denote a transition from monomer to cluster
 
         #compute a dictionary of requested values using this cluster
-        self.__from_monomer.append((self.__compute_coordinate(cluster), num_monomers))
+        self.__from_monomer[frame_num] = self.__compute_coordinate(cluster)
 
-        #append the monomer fraction from previous timestep of cluster formation
-        self.__from_monomer[-1][0]['monomer_fraction'] = monomer_frac
+        #append the number of added monomers and fraction from previous timestep
+        self.__from_monomer[frame_num]['num_monomers']     = num_monomers
+        self.__from_monomer[frame_num]['monomer_fraction'] = monomer_frac
 
         return
 
-    def remove_monomers(self, cluster, num_monomers):
+    def remove_monomers(self, cluster, frame_num, num_monomers, monomer_frac):
         #update the to_monomer list to denote a transition from cluster to monomer
 
-        self.__to_monomer.append((self.__compute_coordinate(cluster), num_monomers))
+        #compute a dictionary of requested values using this cluster
+        self.__to_monomer[frame_num] = self.__compute_coordinate(cluster)
+
+        #append the number of added monomers and fraction from previous timestep
+        self.__to_monomer[frame_num]['num_monomers']     = num_monomers
+        self.__to_monomer[frame_num]['monomer_fraction'] = monomer_frac
+
         return
 
     def get_data(self):

@@ -29,7 +29,7 @@ class Event(Enum):
 
 class Frame:
 
-    def __init__(self, bodies, clusters, frame_num, monomer_frac = -1):
+    def __init__(self, bodies, clusters, frame_num, monomer_ids, monomer_frac = -1):
 
         #init a dictionary that stores which id gets mapped to which cluster
         self.__label_dict = dict()
@@ -47,6 +47,7 @@ class Frame:
         #init the other values
         self.__monomer_frac = monomer_frac
         self.__frame_num    = frame_num
+        self.__monomer_ids  = monomer_ids
 
 
     def create_first_frame(self, cluster_info, frame_num, observer):
@@ -59,7 +60,7 @@ class Frame:
 
             #set the previous monomer concentration to be 1 for monomer -> cluster transition
             num_bodies = len(orig_cluster.get_bodies())
-            cluster_info[-1].add_monomers(orig_cluster, num_bodies, 1)
+            cluster_info[-1].add_monomers(orig_cluster, frame_num, num_bodies, 1)
 
         return
 
@@ -98,7 +99,7 @@ class Frame:
 
                 #augment with monomer addition info
                 num_bodies = len(cluster.get_bodies())
-                cluster_info[-1].add_monomers(cluster, num_bodies, prev_monomer)
+                cluster_info[-1].add_monomers(cluster, frame_num, num_bodies, prev_monomer)
 
             elif (event == Event.POSSIBLE_SPLIT):
                 #clusters have possibly split. perform matching if they have
@@ -153,6 +154,10 @@ class Frame:
     def get_monomer_fraction(self):
 
         return self.__monomer_frac
+
+    def get_monomer_ids(self):
+
+        return self.__monomer_ids
 
     #private utility functions for the update method
 
@@ -364,12 +369,12 @@ class Frame:
             if m_gain > 0:
 
                 cluster_id = key.get_cluster_id()
-                cluster_info[cluster_id].add_monomers(self.__updates[key], m_gain, prev_monomer)
+                cluster_info[cluster_id].add_monomers(self.__updates[key], frame_num, m_gain, prev_monomer)
 
             if m_lost > 0:
 
                 cluster_id = key.get_cluster_id()
-                cluster_info[cluster_id].remove_monomers(key, m_lost)
+                cluster_info[cluster_id].remove_monomers(key, frame_num, m_lost, prev_monomer)
 
 
             #perform the update on the cluster
@@ -485,7 +490,8 @@ def get_data_from_snap(snap, sim, frame_num):
     G = clust.get_groups(bond_dict)
 
     #for each group, create a cluster
-    clusters = []
+    clusters     = []
+    monomer_ids  = []
     num_monomers = 0
     for group in G:
 
@@ -498,11 +504,12 @@ def get_data_from_snap(snap, sim, frame_num):
 
         #increment the number of free monomers
         else:
+            monomer_ids.append(group[0])
             num_monomers += 1
 
     #set the monomer fraction
     monomer_frac = num_monomers / len(bodies)
     
     #create a Frame object for this frame and return it
-    current_frame = Frame(bodies, clusters, frame_num, monomer_frac) 
+    current_frame = Frame(bodies, clusters, frame_num, monomer_ids, monomer_frac) 
     return current_frame

@@ -143,12 +143,13 @@ def get_ex_particle_info(gsd_file, ixn_file, frame):
 
     return
 
-def plot_clusters(coordinates):
+def plot_clusters(sim, coordinates):
     #coordinates contains time series of cluster body positions. plot them
      
     figure, ax = plt.subplots()
-    ax.set_xlim((-7, 7))
-    ax.set_ylim((-7, 7))
+    box_dim = sim.box_dim
+    ax.set_xlim((-box_dim[0]/2, box_dim[0]/2))
+    ax.set_ylim((-box_dim[1]/2, box_dim[1]/2))
 
     # Loop
     for i in range(len(coordinates)):
@@ -168,7 +169,9 @@ def plot_clusters(coordinates):
 
 def run_and_plot_clusters():
 
-    gsd_file = "../patchy_2d/traj.gsd"
+    #patchy 2d test
+    # gsd_file = "../patchy_2d/traj.gsd"
+    gsd_file = "../patchy_2d/traj_multi.gsd"
     ixn_file = "../patchy_2d/interactions.txt"
     jump = 1
 
@@ -188,12 +191,13 @@ def run_and_plot_clusters():
     cluster_info  = []
     old_bodies    = []
 
-    old_frame = frame.get_data_from_snap(snaps.read_frame(0), sim, 0)
-    old_frame.create_first_frame(cluster_info, 0, observer)
+    f0 = 500
+    old_frame = frame.get_data_from_snap(snaps.read_frame(f0), sim, f0)
+    old_frame.create_first_frame(cluster_info, f0, observer)
 
     #loop over each frame and perform the analysis
-    max_frame = 400
-    for frame_num in range(1, max_frame, jump):
+    max_frame = f0+100
+    for frame_num in range(f0, max_frame, jump):
 
         #print message to user about frame num
         print("Analyzing frame ", frame_num)
@@ -220,7 +224,7 @@ def run_and_plot_clusters():
     for i in range(len(cluster_data)):
         test_coordinates.append(cluster_data[i]['positions'])
 
-    plot_clusters(test_coordinates)
+    plot_clusters(sim, test_coordinates)
 
 
 
@@ -260,7 +264,8 @@ if __name__ == "__main__":
     # ixn_file = "../triangles_T3/interactionsT3.txt"
 
     #patchy 2d test
-    gsd_file = "../patchy_2d/traj.gsd"
+    # gsd_file = "../patchy_2d/traj.gsd"
+    gsd_file = "../patchy_2d/traj_multi.gsd"
     ixn_file = "../patchy_2d/interactions.txt"
 
 
