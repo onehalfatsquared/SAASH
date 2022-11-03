@@ -370,6 +370,69 @@ def setupMonomerizationLong(n = 2):
 
     return cluster_info
 
+def setupMultiStepLoss():
+    #trajectory example for 4->3->2->1 via monomer loss
+
+    #init arrays for storage
+    old_bodies = []
+    cluster_info = []
+
+    #create a list of 2 generic bodies
+    bodies     = []
+    for i in range(4):
+        bodies.append(body.Body([0],[0],i))
+
+    #only monomers, no clusters
+    clusters = []
+    clusters.append(cluster.Cluster(bodies, 0))
+
+    #do first call on update_clusters
+    f0 = frame.Frame(bodies, clusters, 0, [], 0)
+    f0.create_first_frame(cluster_info, 0, observer)
+
+    #update 1
+    old_bodies = bodies
+    bodies = []
+    for i in range(4):
+        bodies.append(body.Body([0],[0],i))
+
+    clusters = []
+    clusters.append(cluster.Cluster(bodies[0:3], 1))
+
+    #update frame
+    f1 = frame.Frame(bodies, clusters, 1, [3], 0.25)
+    f1.update(cluster_info, f0, observer)
+
+    #update 2
+    old_bodies = bodies
+    bodies = []
+    for i in range(4):
+        bodies.append(body.Body([0],[0],i))
+
+    clusters = []
+    clusters.append(cluster.Cluster(bodies[0:2], 1))
+
+    #update frame
+    f2 = frame.Frame(bodies, clusters, 2, [2,3], 0.5)
+    f2.update(cluster_info, f1, observer)
+
+    #update 3
+    old_bodies = bodies
+    bodies = []
+    for i in range(4):
+        bodies.append(body.Body([0],[0],i))
+
+    clusters = []
+
+    #update frame
+    f3 = frame.Frame(bodies, clusters, 3, [0,1,2,3], 1)
+    f3.update(cluster_info, f2, observer)
+
+    return cluster_info
+
+
+
+
 
 
 
@@ -416,6 +479,11 @@ def setupExample(which, num_added = 0, num_lost = 0):
 
         #example traj for 2->2->2->1
         return setupMonomerizationLong(num_lost)
+
+    elif (which == "multi_step_loss"):
+
+        #example traj for 4->3->2->1 via monomer loss
+        return setupMultiStepLoss()
 
     else:
 

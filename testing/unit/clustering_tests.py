@@ -189,6 +189,23 @@ def testMonomerization(n=2):
     return
 
 
+def testMultiStepLoss():
+    #test gradual loss of monomers until dissociation
+    cluster_info = examples.setupExample('multi_step_loss')
+
+    # print(cluster_info[0].get_data())
+    # print(cluster_info[0].get_monomer_loss_data())
+
+    assert(cluster_info[0].get_transitions(0,1) == [(4,3),(4,1)])
+    assert(cluster_info[0].get_transitions(0,2) == [(4,2),(4,1),(4,1)])
+    assert(cluster_info[0].get_transitions(0,3) == [(4,1),(4,1),(4,1),(4,1)])
+    assert(cluster_info[0].get_transitions(1,1) == [(3,2),(3,1)])
+    assert(cluster_info[0].get_transitions(1,2) == [(3,1),(3,1),(3,1)])
+    assert(cluster_info[0].get_transitions(2,1) == [(2,1),(2,1)])
+
+    print("Multiple Step Loss Test Passed")
+    return
+
 
 
 
@@ -211,3 +228,4 @@ if __name__ == "__main__":
     testMonomerization(2)
     testMonomerization(3)
     testMonomerization(4)
+    testMultiStepLoss()
