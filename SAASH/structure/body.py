@@ -1,6 +1,6 @@
 '''
 
-This file contains the class implemntations for bodies, particles, bonds, and 
+This file contains the class implementations for bodies, particles, bonds, and 
 nanoparticles. 
 
 Also contains utitility functions for doing computations on these objects.  
@@ -16,7 +16,7 @@ import warnings
 import sys
 import os
 
-from body import neighborgrid as ng
+from util import neighborgrid as ng
 
 
 ####################################################################

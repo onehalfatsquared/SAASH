@@ -13,8 +13,8 @@ clusters, and monomer gain/loss.
 
 '''
 
-from body import body as body
-from body import cluster as clust
+from structure import body as body
+from structure import cluster as clust
 
 from enum import Enum
 

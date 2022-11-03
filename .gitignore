@@ -144,3 +144,7 @@ dmypy.json
 
 #pickled objects
 *.pkl
+
+#images
+*.png
+*.jpg

@@ -16,17 +16,18 @@ import pytest
 
 #add the paths to the relevant folder for testing
 import sys
-sys.path.insert(0, '../../src')
+sys.path.insert(0, '../../SAASH')
 
 #import profiling tools
 import cProfile, pstats
 import re
 import time
 
-from body import body
-from body import neighborgrid
-from body import cluster
-from body import frame
+from structure import body
+from structure import cluster
+from structure import frame
+from util import neighborgrid
+
 import analyzeStructures_refactor as test
 import analyzeStructures as original
 
