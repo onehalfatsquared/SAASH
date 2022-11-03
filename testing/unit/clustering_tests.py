@@ -190,7 +190,7 @@ def testMonomerization(n=2):
 
 
 def testMultiStepLoss():
-    #test gradual loss of monomers until dissociation
+    #test events for gradual loss of monomers until dissociation
     cluster_info = examples.setupExample('multi_step_loss')
 
     # print(cluster_info[0].get_data())

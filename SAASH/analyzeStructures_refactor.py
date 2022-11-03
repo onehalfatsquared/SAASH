@@ -44,10 +44,6 @@ from body import neighborgrid as ng
 from body import cluster as cluster
 from body import frame as frame
 
-#this is a hack for now. make this more general later. WARNING: increase this size to be 
-#larger than the largest structure you see in your simulations
-global MAX_SIZE
-MAX_SIZE = 100
 
 '''
 
@@ -478,11 +474,6 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
     f0 = 500
     old_frame = frame.get_data_from_snap(snaps.read_frame(f0-1), sim, f0-1)
     old_frame.create_first_frame(cluster_info, f0-1, observer)
-    # print(old_frame.get_clusters()[1].get_cluster_id())
-    # print(old_frame.get_monomer_fraction())
-    # print(cluster_info[0].get_data())
-    # print(cluster_info[0].get_monomer_gain_data())
-    # sys.exit()
     for frame_num in range(f0, frames, jump):
 
         #get the snapshot for the current frame
