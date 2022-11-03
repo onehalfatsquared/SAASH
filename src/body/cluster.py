@@ -111,6 +111,10 @@ class Cluster:
 
         return self.__bodies
 
+    def get_num_bodies(self):
+
+        return len(self.__bodies)
+
     def get_body_ids(self):
 
         return [bod.get_id() for bod in self.__bodies]
@@ -146,6 +150,7 @@ class ClusterInfo:
         self.__last_updated = -1
         self.__lifetime     = -1
         self.__is_dead      = False
+        self.__is_absorbed  = False
         self.__has_parent   = False
 
         #init an observer
@@ -164,9 +169,51 @@ class ClusterInfo:
         #may need to offset this by 1, since counting starts at 0
 
 
+    def get_transitions(self, t0, lag):
+        #return a list of all transitions that occur between t0 and lag
+
+        #init event list
+        events = []
+
+        #start with the obvious transition in stored data
+        start_data = self.__stored_data[t0]
+
+        #only do end data if within the lifetime of the cluster
+        if (self.is_dead() and t0+lag+self.__birth_frame == self.__death_frame):
+            pass
+
+        else:
+            end_data   = self.__stored_data[t0+lag]
+
+            #todo - add in a state conversion fn handle, for now just use num_bodies
+            events.append((start_data['num_bodies'], end_data['num_bodies']))
+
+        #perform dictionary comps to determine which events happened in this lag
+        added_mons = {key:value for key,value in self.__from_monomer.items() if (t0 < key-self.__birth_frame <= t0+lag)}
+        lost_mons  = {key:value for key,value in self.__to_monomer.items() if (t0 < key-self.__birth_frame <= t0+lag)}
+
+        #if these compressed dicts are non-empty, add events
+        for key in added_mons.keys():
+
+            #get the number of added monomers
+            num_added = added_mons[key]['num_monomers']
+            for i in range(num_added):
+
+                events.append((1,end_data['num_bodies']))
+
+        for key in lost_mons.keys():
+
+            #get the number of lost monomers
+            num_lost = lost_mons[key]['num_monomers']
+            for i in range(num_lost):
+
+                events.append((start_data['num_bodies'],1))
+
+        return events
 
 
-    def set_parent(self,cluster):
+
+    def set_parent(self, cluster):
         #set the given cluster to be the parent of the cluster, i.e. first in stored data
 
         if not self.__has_parent:
@@ -181,6 +228,15 @@ class ClusterInfo:
         self.__death_frame = frame_num
         self.__set_lifetime()
         self.__is_dead = True
+
+        return
+
+    def absorb(self, frame_num):
+        # set this cluster to dead status
+
+        self.__death_frame = frame_num
+        self.__set_lifetime()
+        self.__is_absorbed = True
 
         return
 
@@ -243,6 +299,10 @@ class ClusterInfo:
     def is_dead(self):
 
         return self.__is_dead
+
+    def is_absorbed(self):
+
+        return self.__is_absorbed
 
 
     def __set_lifetime(self):

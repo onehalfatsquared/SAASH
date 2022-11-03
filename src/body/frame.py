@@ -397,9 +397,30 @@ class Frame:
             current_id = update_pair[1]
             current_cluster = self.__label_dict[current_id][1]
 
-            #update to cluster, but also set a death
+            #update to cluster, and set absorbed status
             cluster_info[old_id].update_data(current_cluster, frame_num, current_monomer)
-            cluster_info[old_id].kill(frame_num)
+            cluster_info[old_id].absorb(frame_num)
+
+        #finally, check for structures that dissociate into monomers, not found by previous steps
+        old_cluster_ids = set([c.get_cluster_id() for c in old_frame.get_clusters()])
+        new_cluster_ids = set([c.get_cluster_id() for c in self.get_clusters()])
+        old_not_new     = old_cluster_ids.difference(new_cluster_ids)
+
+        for c_id in old_not_new:
+
+            #if cluster is not dead or absorbed, that means it split to monomers. perform kill
+            if not (cluster_info[c_id].is_dead() or cluster_info[c_id].is_absorbed()):
+                cluster_match = None
+                for poss_cluster in old_frame.get_clusters():
+                    if c_id == poss_cluster.get_cluster_id():
+                        cluster_match = poss_cluster
+                        break
+
+                #remove monomer and kill the cluster
+                cluster_info[c_id].remove_monomers(cluster_match, frame_num, cluster_match.get_num_bodies(), prev_monomer)
+                cluster_info[c_id].kill(frame_num)
+
+
 
         return
 
