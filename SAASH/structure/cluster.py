@@ -27,9 +27,9 @@ import warnings
 import sys
 import os
 
-from util import neighborgrid as ng
 from structure import body as body
 from structure import frame as frame
+from util import neighborgrid as ng
 
 
 class Cluster:
