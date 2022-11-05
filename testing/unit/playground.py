@@ -266,8 +266,15 @@ if __name__ == "__main__":
 
     #patchy 2d test
     # gsd_file = "../patchy_2d/traj.gsd"
-    gsd_file = "../patchy_2d/traj_multi.gsd"
-    ixn_file = "../patchy_2d/interactions.txt"
+    # gsd_file = "../patchy_2d/traj_multi.gsd"
+    # ixn_file = "../patchy_2d/interactions.txt"
+
+    #patchy 2d test - multinano
+    # gsd_file = "../patchy_2d/traj.gsd"
+    gsd_file = "../patchy_2d_multiNano/traj10.gsd"
+    ixn_file = "../patchy_2d_multiNano/interactions.txt"
+
+
 
 
 
@@ -275,10 +282,10 @@ if __name__ == "__main__":
     # get_ex_particle_info(gsd_file, ixn_file, 500)
     # test_distance()
     # test_subunit_size(gsd_file, ixn_file, 5)
-    # test.run_analysis(gsd_file, ixn_file = ixn_file)
+    test.run_analysis(gsd_file, ixn_file = ixn_file)
 
     #plot clustering test
-    run_and_plot_clusters()
+    # run_and_plot_clusters()
 
 
 

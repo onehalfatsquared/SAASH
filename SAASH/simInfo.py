@@ -15,15 +15,14 @@ parameters, etc. Then I can just pass around the class and access the values as 
 
 import gsd.hoomd
 import numpy as np
-import matplotlib.pyplot as plt 
 import pandas as pd
 
 import warnings
 import sys
 import os
 
-from structure import body
-from util import neighborgrid as ng
+from .structure import body
+from .util import neighborgrid as ng
 
 
 class SimInfo:
@@ -202,6 +201,7 @@ class SimInfo:
 
         #loop over all nano types to get number of nanoparticles
         body_set = set()
+        nano_list = []
         for nano_type in self.nano_types:
 
             ntype_mask = (particle_info['type'] == nano_type)

@@ -32,17 +32,17 @@ number of bonds, and the sum of cluster sizes.
 
 import gsd.hoomd
 import numpy as np
-import matplotlib.pyplot as plt 
 import pandas as pd
 
 import warnings
 import sys
 import os
 
-from structure import body
-from structure import cluster as cluster
-from structure import frame as frame
-from simInfo import *
+from .structure import body
+from .structure import cluster as cluster
+from .structure import frame as frame
+
+from .simInfo import *
 
 ####################################################################
 ################# Main Drivers #####################################
@@ -152,10 +152,12 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
     cluster_info  = []
 
     #loop over each frame and perform the analysis
-    f0 = 500
+    f0 = 1
     old_frame = frame.get_data_from_snap(snaps.read_frame(f0-1), sim, f0-1)
     old_frame.create_first_frame(cluster_info, f0-1, observer)
     for frame_num in range(f0, frames, jump):
+
+        print(frame_num)
 
         #get the snapshot for the current frame
         snap = snaps.read_frame(frame_num)
@@ -172,7 +174,6 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
             cluster_info, old_frame = cluster.track_clustering(snap, sim, frame_num, 
                                                                 cluster_info, old_frame,
                                                                 observer)
-            print(old_frame.get_monomer_ids())
 
         else:
             q = []
@@ -184,12 +185,12 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
                     q_i    = analyze_structures(particle_info, sim, r, center) 
                     q.append(q_i) 
 
-        if frame_num > 550:
-            for i in range(len(cluster_info)):
-                print(i, len(cluster_info[i].get_data()))
-            ex_data = cluster_info[0].get_data()
-            print(ex_data[0]['positions'])
-            sys.exit()
+        # if frame_num > 550:
+        #     for i in range(len(cluster_info)):
+        #         print(i, len(cluster_info[i].get_data()))
+        #     ex_data = cluster_info[0].get_data()
+        #     print(ex_data[0]['positions'])
+        #     sys.exit()
 
         #write to file
         if write_output:
@@ -209,7 +210,8 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
             
 
         if (verbose):
-            print(frame, q)
+            a = 1
+            print(frame_num, print(old_frame.get_monomer_ids()))
 
     #close the file
     if write_output:
@@ -219,17 +221,17 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
     return 
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    #get the name command line arguments - will update to parser in future
-    try:
-        gsd_file = sys.argv[1]
-        ixn_file = sys.argv[2]
-        jump     = int(sys.argv[3])
-    except:
-        print("Usage: %s <gsd_file> <ixn_file> <frame_skip>" % sys.argv[0])
-        raise
+#     #get the name command line arguments - will update to parser in future
+#     try:
+#         gsd_file = sys.argv[1]
+#         ixn_file = sys.argv[2]
+#         jump     = int(sys.argv[3])
+#     except:
+#         print("Usage: %s <gsd_file> <ixn_file> <frame_skip>" % sys.argv[0])
+#         raise
 
-    #run analysis
-    run_analysis(gsd_file, jump = jump, ixn_file = ixn_file, verbose = True, write_output = False)
+#     #run analysis
+#     run_analysis(gsd_file, jump = jump, ixn_file = ixn_file, verbose = True, write_output = False)
 

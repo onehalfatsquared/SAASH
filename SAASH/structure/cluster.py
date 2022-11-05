@@ -20,16 +20,26 @@ values at every logged frame.
 
 import gsd.hoomd
 import numpy as np
-import matplotlib.pyplot as plt 
 import pandas as pd
 
 import warnings
 import sys
 import os
 
-from structure import body as body
-from structure import frame as frame
+from . import body as body
+from . import frame as frame
+
+#append parent directory to import util
+from inspect import getsourcefile
+
+current_path = os.path.abspath(getsourcefile(lambda:0))
+current_dir = os.path.dirname(current_path)
+parent_dir = current_dir[:current_dir.rfind(os.path.sep)]
+sys.path.insert(0, parent_dir)
+
 from util import neighborgrid as ng
+
+sys.path.pop(0)
 
 
 class Cluster:
