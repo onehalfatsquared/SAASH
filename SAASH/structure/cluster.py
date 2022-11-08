@@ -189,20 +189,24 @@ class ClusterInfo:
         start_data = self.__stored_data[t0]
 
         #only do end data if within the lifetime of the cluster
-        if (self.is_dead() and t0+lag+self.__birth_frame == self.__death_frame):
+        if (self.is_dead() and not self.has_parent() and t0+lag+self.__birth_frame == self.__death_frame):
             pass
 
         else:
-            end_data   = self.__stored_data[t0+lag]
 
-            #todo - add in a state conversion fn handle, for now just use num_bodies
-            events.append((start_data['num_bodies'], end_data['num_bodies']))
+            if (t0+lag < len(self.__stored_data)):
+                end_data   = self.__stored_data[t0+lag]
+
+                #todo - add in a state conversion fn handle, for now just use num_bodies
+                events.append((start_data['num_bodies'], end_data['num_bodies']))
 
         #perform dictionary comps to determine which events happened in this lag
         added_mons = {key:value for key,value in self.__from_monomer.items() if (t0 < key-self.__birth_frame <= t0+lag)}
         lost_mons  = {key:value for key,value in self.__to_monomer.items() if (t0 < key-self.__birth_frame <= t0+lag)}
 
-        #if these compressed dicts are non-empty, add events
+        #if these compressed dicts are non-empty
+
+        #addition events
         for key in added_mons.keys():
 
             #get the number of added monomers
@@ -211,6 +215,7 @@ class ClusterInfo:
 
                 events.append((1,end_data['num_bodies']))
 
+        #subtraction events
         for key in lost_mons.keys():
 
             #get the number of lost monomers
@@ -219,15 +224,35 @@ class ClusterInfo:
 
                 events.append((start_data['num_bodies'],1))
 
+        #if looking at first frame, add in monomerization events. skip if splitting from a parent
+        if t0 == 0 and not self.__has_parent:
+
+            #get the number of added monomers - cant add more than what we end with
+            num_added = self.__from_monomer[self.__birth_frame]['num_monomers']
+
+            if (self.is_dead() and t0+lag+self.__birth_frame == self.__death_frame):
+                end_data = {'num_bodies':0}
+            elif len(self.__stored_data) == 1:
+                end_data = self.__stored_data[t0]
+            else:
+                end_data = self.__stored_data[t0+lag]
+
+            upper_bound = end_data['num_bodies']
+
+            for i in range(min(num_added,upper_bound)):
+
+                events.append((1,end_data['num_bodies']))
+
         return events
 
 
 
-    def set_parent(self, cluster):
+    def set_parent(self, cluster, prev_monomer):
         #set the given cluster to be the parent of the cluster, i.e. first in stored data
 
         if not self.__has_parent:
             self.__stored_data.insert(0, self.__compute_coordinate(cluster))
+            self.__stored_data[0]['monomer_fraction'] = prev_monomer
             self.__has_parent = True
 
         return
@@ -313,6 +338,10 @@ class ClusterInfo:
     def is_absorbed(self):
 
         return self.__is_absorbed
+
+    def has_parent(self):
+
+        return self.__has_parent
 
 
     def __set_lifetime(self):

@@ -152,7 +152,7 @@ def setupSplit():
     clusters.append(cluster.Cluster(bodies, 0))
 
     #create the first frame with this info
-    f0 = frame.Frame(bodies, clusters, 0, 0)
+    f0 = frame.Frame(bodies, clusters, 0, [], 0)
     f0.create_first_frame(cluster_info, 0, observer)
 
     #set old bodies to bodies, make new bodies, assign them split to two clusters
@@ -166,7 +166,7 @@ def setupSplit():
     clusters.append(cluster.Cluster(bodies[4:10], 1))
 
     #create next frame and do an update
-    f1 = frame.Frame(bodies, clusters, 1, 0)
+    f1 = frame.Frame(bodies, clusters, 1, [],0)
     f1.update(cluster_info, f0, observer)
 
     return cluster_info
@@ -431,6 +431,126 @@ def setupMultiStepLoss():
     return cluster_info
 
 
+def setupMonomerSwap():
+    #example trajectory for [(0,1,2),(3,4)] -> [(0,1),(2,3,4)]
+
+    #init arrays for storage
+    old_bodies = []
+    cluster_info = []
+
+    #create a list of 2 generic bodies
+    bodies     = []
+    for i in range(5):
+        bodies.append(body.Body([0],[0],i))
+
+    #only monomers, no clusters
+    clusters = []
+    clusters.append(cluster.Cluster(bodies[0:3], 0))
+    clusters.append(cluster.Cluster(bodies[3:5], 0))
+
+    #do first call on update_clusters
+    f0 = frame.Frame(bodies, clusters, 0, [], 0)
+    f0.create_first_frame(cluster_info, 0, observer)
+
+    #update 1
+    old_bodies = bodies
+    bodies = []
+    for i in range(5):
+        bodies.append(body.Body([0],[0],i))
+
+    clusters = []
+    clusters.append(cluster.Cluster(bodies[0:2], 0))
+    clusters.append(cluster.Cluster(bodies[2:5], 0))
+
+    #update frame
+    f1 = frame.Frame(bodies, clusters, 1, [], 0)
+    f1.update(cluster_info, f0, observer)
+
+    return cluster_info
+
+def setupMonomerSwap2():
+    #example trajectory for [(0,1),2,3] -> [(0,2),(1,3)]
+
+    #init arrays for storage
+    old_bodies = []
+    cluster_info = []
+
+    #create a list of 2 generic bodies
+    bodies     = []
+    for i in range(4):
+        bodies.append(body.Body([0],[0],i))
+
+    #only monomers, no clusters
+    clusters = []
+    clusters.append(cluster.Cluster(bodies[0:2], 0))
+
+    #do first call on update_clusters
+    f0 = frame.Frame(bodies, clusters, 0, [2,3], 0.5)
+    f0.create_first_frame(cluster_info, 0, observer)
+
+    #update 1
+    old_bodies = bodies
+    bodies = []
+    for i in range(4):
+        bodies.append(body.Body([0],[0],i))
+
+    clusters = []
+    clusters.append(cluster.Cluster(bodies[0:3:2], 0))
+    clusters.append(cluster.Cluster(bodies[1:4:2], 0))
+
+    #update frame
+    f1 = frame.Frame(bodies, clusters, 1, [], 0.0)
+    f1.update(cluster_info, f0, observer)
+
+    return cluster_info
+
+
+def setupM2D2M():
+    #example trajectory for 2 monomers to dimer to 2 monomers
+
+    #init arrays for storage
+    old_bodies = []
+    cluster_info = []
+
+    #create a list of 2 generic bodies
+    bodies     = []
+    for i in range(2):
+        bodies.append(body.Body([0],[0],i))
+
+    #only monomers, no clusters
+    clusters = []
+
+    #do first call on update_clusters
+    f0 = frame.Frame(bodies, clusters, 0, [0,1], 1)
+    f0.create_first_frame(cluster_info, 0, observer)
+
+    #update 1
+    old_bodies = bodies
+    bodies = []
+    for i in range(2):
+        bodies.append(body.Body([0],[0],i))
+
+    clusters = []
+    clusters.append(cluster.Cluster(bodies, 1))
+
+    #update frame
+    f1 = frame.Frame(bodies, clusters, 1, [], 0.0)
+    f1.update(cluster_info, f0, observer)
+
+    #update 2
+    old_bodies = bodies
+    bodies = []
+    for i in range(2):
+        bodies.append(body.Body([0],[0],i))
+
+    clusters = []
+
+    #update frame
+    f2 = frame.Frame(bodies, clusters, 2, [0,1], 1.0)
+    f2.update(cluster_info, f1, observer)
+
+    return cluster_info
+
 
 
 
@@ -484,6 +604,21 @@ def setupExample(which, num_added = 0, num_lost = 0):
 
         #example traj for 4->3->2->1 via monomer loss
         return setupMultiStepLoss()
+
+    elif (which == "monomer_swap"):
+
+        #example trajectory for [(0,1,2),(3,4)] -> [(0,1),(2,3,4)]
+        return setupMonomerSwap()
+
+    elif (which == "monomer_swap_2"):
+
+        #example trajectory for [(0,1),2,3] -> [(0,2),(1,3)]
+        return setupMonomerSwap2()
+
+    elif (which == "m2d2m"):
+
+        #example trajectory for 2 monomers to dimer to 2 monomers
+        return setupM2D2M()
 
     else:
 

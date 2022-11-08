@@ -38,6 +38,15 @@ def testClusteringSplit():
     #get the clusterinfo for the example
     cluster_info = examples.setupExample('split')
 
+    # print(cluster_info[0].get_data())
+    # print(cluster_info[1].get_data())
+    # print(cluster_info[0].get_monomer_gain_data())
+    # print(cluster_info[1].get_monomer_gain_data())
+    # print(cluster_info[0].get_monomer_loss_data())
+    # print(cluster_info[1].get_monomer_loss_data())
+
+    # print(cluster_info[1].get_transitions(0,1))
+
     #do check on clusterinfo
     assert(cluster_info[0].get_data()[0]['num_bodies'] == 10)
     assert(cluster_info[1].get_data()[0]['num_bodies'] == 10)
@@ -141,12 +150,14 @@ def testGetEventsWithLag():
 
     cluster_info = examples.setupExample('4step')
 
+    # print(cluster_info[1].get_transitions(0,1))
+
     #can do a thorough check of all of the expected outputs
     #main cluster checks
-    assert(cluster_info[1].get_transitions(0,1) == [(3,3)])
-    assert(cluster_info[1].get_transitions(0,2) == [(3,4),(1,4)])
-    assert(cluster_info[1].get_transitions(0,3) == [(3,7),(1,7)])
-    assert(cluster_info[1].get_transitions(0,4) == [(3,6),(1,6),(3,1)])
+    assert(cluster_info[1].get_transitions(0,1) == [(3,3),(1,3),(1,3),(1,3)])
+    assert(cluster_info[1].get_transitions(0,2) == [(3,4),(1,4),(1,4),(1,4),(1,4)])
+    assert(cluster_info[1].get_transitions(0,3) == [(3,7),(1,7),(1,7),(1,7),(1,7)])
+    assert(cluster_info[1].get_transitions(0,4) == [(3,6),(1,6),(3,1),(1,6),(1,6),(1,6)])
     assert(cluster_info[1].get_transitions(1,1) == [(3,4),(1,4)])
     assert(cluster_info[1].get_transitions(1,2) == [(3,7),(1,7)])
     assert(cluster_info[1].get_transitions(1,3) == [(3,6),(1,6),(3,1)])
@@ -155,9 +166,9 @@ def testGetEventsWithLag():
     assert(cluster_info[1].get_transitions(3,1) == [(7,6),(7,1)])
 
     #side cluster checks
-    assert(cluster_info[0].get_transitions(0,1) == [(3,3)])
-    assert(cluster_info[0].get_transitions(0,2) == [(3,3)])
-    assert(cluster_info[0].get_transitions(0,3) == [(3,7)])
+    assert(cluster_info[0].get_transitions(0,1) == [(3,3),(1,3),(1,3),(1,3)])
+    assert(cluster_info[0].get_transitions(0,2) == [(3,3),(1,3),(1,3),(1,3)])
+    assert(cluster_info[0].get_transitions(0,3) == [(3,7),(1,7),(1,7),(1,7)])
     assert(cluster_info[0].get_transitions(1,1) == [(3,3)])
     assert(cluster_info[0].get_transitions(1,2) == [(3,7)])
     assert(cluster_info[0].get_transitions(2,1) == [(3,7)])
@@ -176,10 +187,12 @@ def testMonomerization(n=2):
     # print(cluster_info[0].get_data())
     # print(cluster_info[0].get_monomer_loss_data())
 
+    # print(cluster_info[0].get_transitions(0,3))
+
     #main cluster checks
-    assert(cluster_info[0].get_transitions(0,1) == [(n,n)])
-    assert(cluster_info[0].get_transitions(0,2) == [(n,n)])
-    assert(cluster_info[0].get_transitions(0,3) == [(n,1)]*n)
+    assert(cluster_info[0].get_transitions(0,1) == sum([[(n,n)],[(1,n)]*n],[]))
+    assert(cluster_info[0].get_transitions(0,2) == sum([[(n,n)],[(1,n)]*n],[]))
+    assert(cluster_info[0].get_transitions(0,3) == sum([[(n,1)]*n],[]))
     assert(cluster_info[0].get_transitions(1,1) == [(n,n)])
     assert(cluster_info[0].get_transitions(1,2) == [(n,1)]*n)
     assert(cluster_info[0].get_transitions(2,1) == [(n,1)]*n)
@@ -196,8 +209,10 @@ def testMultiStepLoss():
     # print(cluster_info[0].get_data())
     # print(cluster_info[0].get_monomer_loss_data())
 
-    assert(cluster_info[0].get_transitions(0,1) == [(4,3),(4,1)])
-    assert(cluster_info[0].get_transitions(0,2) == [(4,2),(4,1),(4,1)])
+    # print(cluster_info[0].get_transitions(0,3))
+
+    assert(cluster_info[0].get_transitions(0,1) == [(4,3),(4,1),(1,3),(1,3),(1,3)])
+    assert(cluster_info[0].get_transitions(0,2) == [(4,2),(4,1),(4,1),(1,2),(1,2)])
     assert(cluster_info[0].get_transitions(0,3) == [(4,1),(4,1),(4,1),(4,1)])
     assert(cluster_info[0].get_transitions(1,1) == [(3,2),(3,1)])
     assert(cluster_info[0].get_transitions(1,2) == [(3,1),(3,1),(3,1)])
@@ -206,6 +221,75 @@ def testMultiStepLoss():
     print("Multiple Step Loss Test Passed")
     return
 
+
+def testMonomerSwap():
+    #a dimer and a trimer swap one subunit
+    cluster_info = examples.setupExample('monomer_swap')
+
+    # print(cluster_info[0].get_data())
+    # print(cluster_info[1].get_data())
+
+    # print(cluster_info[0].is_absorbed())
+    # print(cluster_info[1].is_absorbed())
+
+    assert(cluster_info[0].get_data()[0]['num_bodies'] == 3)
+    assert(cluster_info[0].get_data()[1]['num_bodies'] == 2)
+    assert(cluster_info[1].get_data()[0]['num_bodies'] == 2)
+    assert(cluster_info[1].get_data()[1]['num_bodies'] == 3)
+    assert(cluster_info[0].is_absorbed() == False)
+    assert(cluster_info[1].is_absorbed() == False)
+
+    print("Monomer Swap Test 1 Passed")
+
+    return
+
+
+def testMonomerSwap2():
+    #dimer breaks apart, each monomer forms a new dimer
+
+    cluster_info = examples.setupExample('monomer_swap_2')
+
+    # print(cluster_info[0].get_data())
+    # print(cluster_info[1].get_data())
+
+    # print(cluster_info[0].get_monomer_gain_data())
+    # print(cluster_info[1].get_monomer_gain_data())
+
+    # print(cluster_info[0].get_transitions(0,1))
+    # print(cluster_info[1].get_transitions(0,1))
+
+
+    assert(cluster_info[0].get_data()[0]['num_bodies'] == 2)
+    assert(cluster_info[0].get_data()[1]['num_bodies'] == 2)
+    assert(cluster_info[1].get_data()[0]['num_bodies'] == 2)
+    assert(cluster_info[0].get_transitions(0,1) == [(2,2),(1,2),(1,2),(1,2)])
+    assert(cluster_info[1].get_transitions(0,1) == [(1,2)])
+    
+
+    print("Monomer Swap Test 2 Passed")
+
+    return
+
+def testMonomer2Dimer2Monomer():
+    #two monomers form a dimer, then break into two monomers
+
+    cluster_info = examples.setupExample('m2d2m')
+
+    # print(cluster_info[0].get_data())
+
+    # print(cluster_info[0].get_monomer_gain_data())
+    # print(cluster_info[0].get_monomer_loss_data())
+
+    # print(cluster_info[0].get_transitions(0,1))
+
+
+    assert(cluster_info[0].get_data()[0]['num_bodies'] == 2)
+    assert(cluster_info[0].get_transitions(0,1) == [(2,1),(2,1)])
+    
+
+    print("M2D2M Test Passed")
+
+    return
 
 
 
@@ -229,3 +313,6 @@ if __name__ == "__main__":
     testMonomerization(3)
     testMonomerization(4)
     testMultiStepLoss()
+    testMonomerSwap()
+    testMonomerSwap2()
+    testMonomer2Dimer2Monomer()

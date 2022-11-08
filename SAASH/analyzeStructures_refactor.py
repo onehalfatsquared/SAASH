@@ -142,7 +142,7 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
 
     #create an observer to compute requested observables
     observer = cluster.Observer(gsd_file)
-    observer.init_test_set()
+    observer.add_observable('num_bodies')
 
     #init outfile to dump results
     if write_output:
@@ -155,9 +155,11 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
     f0 = 1
     old_frame = frame.get_data_from_snap(snaps.read_frame(f0-1), sim, f0-1)
     old_frame.create_first_frame(cluster_info, f0-1, observer)
+    mon_fracs = []
     for frame_num in range(f0, frames, jump):
 
-        print(frame_num)
+        #get the monomer fraction
+        mon_fracs.append(old_frame.get_monomer_fraction())
 
         #get the snapshot for the current frame
         snap = snaps.read_frame(frame_num)
@@ -175,50 +177,15 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
                                                                 cluster_info, old_frame,
                                                                 observer)
 
-        else:
-            q = []
-            for nano_type in range(sim.num_nano_types):
-                for nanoparticle in range(len(nano_centers[nano_type])):
-                    r      = nano_radii[nano_type] * sim.radius_mult + sim.largest_bond_distance
-                    # print(r)
-                    center = nano_centers[nano_type][nanoparticle]
-                    q_i    = analyze_structures(particle_info, sim, r, center) 
-                    q.append(q_i) 
-
-        # if frame_num > 550:
-        #     for i in range(len(cluster_info)):
-        #         print(i, len(cluster_info[i].get_data()))
-        #     ex_data = cluster_info[0].get_data()
-        #     print(ex_data[0]['positions'])
-        #     sys.exit()
-
-        #write to file
-        if write_output:
-            
-            if (not sim.nano_flag): #ouput for no nanoparticle system
-                fout.write("{} ".format(frame))
-                for i in range(output_max_length):
-                     f.write("{} ".format(cluster_sizes[i+1]))
-                fout.write("{}".format(largest_cluster))
-                fout.write("\n")
-
-            else: #output for at least 1 nanoparticle
-                fout.write("{}".format(frame))
-                for nano in range(sim.num_nanos):
-                    fout.write(",%s,%s,%s"%(q[nano][0], q[nano][1], q[nano][2]))
-                fout.write("\n")
-            
 
         if (verbose):
-            a = 1
-            print(frame_num, print(old_frame.get_monomer_ids()))
+            print("Frame {} analyzed".format(frame_num))
 
-    #close the file
-    if write_output:
-        fout.close()
-        print("Cluster sizes written to file")
+    
 
-    return 
+    return cluster_info, mon_fracs
+
+
 
 
 # if __name__ == "__main__":
