@@ -129,7 +129,7 @@ def analyze_structures(snap, sim, radius = None, center = None):
 
 
 
-def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = False, write_output = False):
+def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", observer = None):
     #get number of monomers and dimers at each frame in the sim
 
     #get the collection of snapshots and get number of frames
@@ -140,13 +140,12 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
     #gather all the relevant global info into a SimInfo object
     sim = SimInfo(snap, frames, ixn_file = ixn_file)
 
-    #create an observer to compute requested observables
-    observer = cluster.Observer(gsd_file)
-    observer.add_observable('num_bodies')
-
-    #init outfile to dump results
-    if write_output:
-        fout = open("analysis_out.dat", 'w') 
+    #check for observer. if not found create default observer with a warning
+    if observer is None:
+        observer = cluster.Observer(gsd_file)
+        observer.add_observable('num_bodies')
+        print("WARNING: Observer not specified. Using default observer:")
+        print("Will track individual clusters and their size as they evolve")
 
     #init an array to track live clusters
     cluster_info  = []
@@ -178,10 +177,6 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
             cluster_info, old_frame = cluster.track_clustering(snap, sim, frame_num, 
                                                                 cluster_info, old_frame,
                                                                 observer)
-
-
-        if (verbose):
-            print("Frame {} analyzed".format(frame_num))
 
     
 
