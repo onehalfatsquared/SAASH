@@ -38,9 +38,11 @@ import warnings
 import sys
 import os
 
-from .structure import body
+from .structure import body as body
 from .structure import cluster as cluster
 from .structure import frame as frame
+
+from .util import observer as obs
 
 from .simInfo import *
 
@@ -66,14 +68,6 @@ def analyze_structures(snap, sim, radius = None, center = None):
     #determine the bond network using the list of bodies
     body.get_bonded_bodies(bodies, sim, bond_dict)
 
-    #debug lines
-    # print(bond_dict)
-    # bonds = 0
-    # for key in bond_dict.keys():
-    #     bonds += len(bond_dict[key])
-    # print("Bonds ", bonds/2)
-    # return bonds, bonds
-
     #determine groups of bonded structures
     G = cluster.get_groups(bond_dict)
     print(G)
@@ -89,15 +83,9 @@ def analyze_structures(snap, sim, radius = None, center = None):
             print(clusters[-1].get_body_ids())
 
 
-    sys.exit()
-
-
 
     #count the sizes of each group
     size_counts, largest_group_size = cluster.get_group_sizes(G)
-    print(size_counts)
-    print(largest_group_size)
-    sys.exit()
 
     #if nanoparticle present, compute (num_adsorbed, largestClusterSize, largestClusterBonds)
     if (radius and center.any()):
@@ -142,10 +130,11 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", observer = N
 
     #check for observer. if not found create default observer with a warning
     if observer is None:
-        observer = cluster.Observer(gsd_file)
-        observer.add_observable('num_bodies')
-        print("WARNING: Observer not specified. Using default observer:")
-        print("Will track individual clusters and their size as they evolve")
+        observer = obs.Observer(gsd_file=gsd_file)
+        observer.init_default_set()
+        print("WARNING: Observer not specified. Using default observer:\n")
+        print("Will track individual clusters and their size as they evolve.\n")
+        pause = input("Press any key to confirm and continue...")
 
     #init an array to track live clusters
     cluster_info  = []

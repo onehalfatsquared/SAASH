@@ -351,73 +351,10 @@ class ClusterInfo:
         return
 
     def __compute_coordinate(self, cluster):
-        '''this computes various observables for the cluster, based on user input
-           given to the observer class. Default is simply number of bodies'''
+        '''Compute the all quantities stored in the observer on the given cluster'''
 
 
-           #move computation of properties to the observer class
-
-        #init a dict to store properties of the cluster
-        property_dict = dict()
-
-        #get the list of observables requested, and compute them from cluster
-        observables = self.__observer.get_observables()
-        for obs in observables:
-
-            if obs == "num_bodies":
-
-                property_dict['num_bodies'] = len(cluster.get_bodies())
-
-            elif obs == "positions":
-
-                property_dict['positions'] = cluster.get_body_positions()
-
-            else:
-
-                raise("The requested property is not implemented. Check that it is"\
-                    " implemented and spelled correctly")
-
-
-            
-
-
-        return property_dict
-
-
-
-
-
-class Observer:
-
-    def __init__(self, gsd_file):
-
-        #use the gsd file to determine an output file for this run - todo
-        self.__outfile = "test_out.py"
-
-        #todo - determine obersvables fromm an input file
-
-
-        #init a set of observables to compute. Always add monomer fraction
-        self.__observable_set = set()
-
-        #init variables for current and previous monomer fractions
-        self.current_monomer  = -1
-        self.previous_monomer = -1
-
-
-
-    def add_observable(self, observable):
-
-        self.__observable_set.add(observable)
-
-    def get_observables(self):
-
-        return self.__observable_set
-
-    def init_test_set(self):
-        #init the observable set to those helpful for testing
-
-        self.__observable_set = set(['positions'])
+        return self.__observer.compute_coordinate(cluster)
 
 
 ####################################################################
