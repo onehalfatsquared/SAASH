@@ -116,7 +116,7 @@ def setupMerge():
     clusters.append(cluster.Cluster(bodies[4:10], 0))
 
     #create the first frame with this info
-    f0 = frame.Frame(bodies, clusters, 0, 0)
+    f0 = frame.Frame(bodies, clusters, 0, [], 0)
     f0.create_first_frame(cluster_info, 0, observer)
 
     #set old bodies to bodies, make new bodies, assign them all to same cluster
@@ -129,7 +129,7 @@ def setupMerge():
     clusters.append(cluster.Cluster(bodies, 1))
 
     #create next frame and do an update
-    f1 = frame.Frame(bodies, clusters, 1, 0)
+    f1 = frame.Frame(bodies, clusters, 1, [], 0)
     f1.update(cluster_info, f0, observer)
 
     return cluster_info
@@ -188,7 +188,7 @@ def setupMonLoss(num_mon = 1):
     clusters.append(cluster.Cluster(bodies, 0))
 
     #create the first frame with this info
-    f0 = frame.Frame(bodies, clusters, 0, 0)
+    f0 = frame.Frame(bodies, clusters, 0, [], 0)
     f0.create_first_frame(cluster_info, 0, observer)
 
     #set old bodies to bodies, make new bodies, remove some as monomers
@@ -202,7 +202,7 @@ def setupMonLoss(num_mon = 1):
 
     #call update again
     #create next frame and do an update
-    f1 = frame.Frame(bodies, clusters, 1, num_mon/10)
+    f1 = frame.Frame(bodies, clusters, 1, [9], num_mon/10)
     f1.update(cluster_info, f0, observer)
 
     return cluster_info
@@ -551,6 +551,42 @@ def setupM2D2M():
 
     return cluster_info
 
+def setupDDM():
+    #example trajectory for 2 monomers to dimer to 2 monomers
+
+    #init arrays for storage
+    old_bodies = []
+    cluster_info = []
+
+    #create a list of 2 generic bodies
+    bodies     = []
+    for i in range(5):
+        bodies.append(body.Body([0],[0],i))
+
+    #two dimers and a monomer
+    clusters = []
+    clusters.append(cluster.Cluster(bodies[0:2], 0))
+    clusters.append(cluster.Cluster(bodies[2:4], 0))
+
+    #do first call on update_clusters
+    f0 = frame.Frame(bodies, clusters, 0, [4], 0.2)
+    f0.create_first_frame(cluster_info, 0, observer)
+
+    #update 1
+    old_bodies = bodies
+    bodies = []
+    for i in range(5):
+        bodies.append(body.Body([0],[0],i))
+
+    clusters = []
+    clusters.append(cluster.Cluster(bodies, 1))
+
+    #update frame
+    f1 = frame.Frame(bodies, clusters, 1, [], 0.0)
+    f1.update(cluster_info, f0, observer)
+
+    return cluster_info
+
 
 
 
@@ -619,6 +655,11 @@ def setupExample(which, num_added = 0, num_lost = 0):
 
         #example trajectory for 2 monomers to dimer to 2 monomers
         return setupM2D2M()
+
+    elif (which == "ddm"):
+
+        #example trajectory for 2 dimers and monomer forming 5mer
+        return setupDDM()
 
     else:
 

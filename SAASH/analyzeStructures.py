@@ -177,6 +177,7 @@ class SimInfo:
 
         #loop over all nano types
         body_set = set()
+        nano_list = []
         for nano_type in nano_types:
 
             condition = (particle_info['type'] == nano_type)
@@ -458,11 +459,11 @@ def analyze_structures(particle_info, sim, radius = None, center = None):
     #determine groups of bonded structures
     G, bond_dict = get_groups(bond_dict)
 
-    bonds = 0
-    for key in bond_dict.keys():
-        bonds += len(bond_dict[key])
-    print("Bonds ", bonds/2)
-    return bonds, bonds
+    # bonds = 0
+    # for key in bond_dict.keys():
+    #     bonds += len(bond_dict[key])
+    # print("Bonds ", bonds/2)
+    # return bonds, bonds
 
     #count the sizes of each group
     size_counts, largest_group_size = get_group_sizes(G)
@@ -510,10 +511,11 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
 
     #init outfile to dump results
     if write_output:
-        fout = open("analysis_out.dat", 'w') 
+        outfile = gsd_file.split('.gsd')[0] + ".cluster"
+        fout = open(outfile, 'w') 
 
     #loop over each frame and perform the analysis
-    for frame in range(400, frames, jump):
+    for frame in range(0, frames, jump):
 
         #get the snapshot for the current frame
         snap = snaps.read_frame(frame)
@@ -543,6 +545,8 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
         #analyze the structures based on nanoparticle presence
         if (not sim.nano_flag):
             q = analyze_structures(particle_info, sim)
+            cluster_sizes = q[0]
+            largest_cluster = q[1]
 
         else:
             q = []
@@ -559,8 +563,8 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
             
             if (not sim.nano_flag): #ouput for no nanoparticle system
                 fout.write("{} ".format(frame))
-                for i in range(output_max_length):
-                     f.write("{} ".format(cluster_sizes[i+1]))
+                for i in range(MAX_SIZE-1):
+                    fout.write("{} ".format(cluster_sizes[i+1]))
                 fout.write("{}".format(largest_cluster))
                 fout.write("\n")
 

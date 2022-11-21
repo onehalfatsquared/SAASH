@@ -156,10 +156,12 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
     old_frame = frame.get_data_from_snap(snaps.read_frame(f0-1), sim, f0-1)
     old_frame.create_first_frame(cluster_info, f0-1, observer)
     mon_fracs = []
+    monomer_id_sets = []
     for frame_num in range(f0, frames, jump):
 
-        #get the monomer fraction
+        #get the monomer fraction and ids
         mon_fracs.append(old_frame.get_monomer_fraction())
+        monomer_id_sets.append(old_frame.get_monomer_ids())
 
         #get the snapshot for the current frame
         snap = snaps.read_frame(frame_num)
@@ -183,7 +185,7 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", verbose = Fa
 
     
 
-    return cluster_info, mon_fracs
+    return cluster_info, mon_fracs, monomer_id_sets
 
 
 

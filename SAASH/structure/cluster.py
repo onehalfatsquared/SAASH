@@ -231,11 +231,11 @@ class ClusterInfo:
             num_added = self.__from_monomer[self.__birth_frame]['num_monomers']
 
             if (self.is_dead() and t0+lag+self.__birth_frame == self.__death_frame):
-                end_data = {'num_bodies':0}
+                end_data = self.__stored_data[t0+lag-1]
             elif len(self.__stored_data) == 1:
                 end_data = self.__stored_data[t0]
             else:
-                end_data = self.__stored_data[t0+lag]
+                end_data = self.__stored_data[t0+lag-1]
 
             upper_bound = end_data['num_bodies']
 

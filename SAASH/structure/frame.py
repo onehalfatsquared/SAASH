@@ -47,7 +47,7 @@ class Frame:
         #init the other values
         self.__monomer_frac = monomer_frac
         self.__frame_num    = frame_num
-        self.__monomer_ids  = monomer_ids
+        self.__monomer_ids  = set(monomer_ids)
 
         #set a tolerance for cluster absorbption fraction
         self.__absorb_tol = 0.81
@@ -344,6 +344,17 @@ class Frame:
 
         #sort the possibilities by similarity
         sorted_poss, sorted_similarity = sort_A_by_B(possible_list, similarity_vals)
+
+        #check if first two of the similarities are equal
+        if sorted_similarity[0] == sorted_similarity[1]:
+
+            #further sort by cluster index
+            c0 = sorted_poss[0].get_cluster_id()
+            c1 = sorted_poss[1].get_cluster_id()
+
+            #swap so the lower cluster index appears first
+            if c1 < c0:
+                sorted_poss[0], sorted_poss[1] = sorted_poss[1], sorted_poss[0]
 
         #loop through sorted list. assign this cluster the first un-assigned match
         match_flag = False
