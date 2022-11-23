@@ -11,10 +11,13 @@ from structure import body
 from structure import cluster
 from structure import frame
 from util import neighborgrid
+from util import observer as obs
 
 #set a common observer for testing
-observer = cluster.Observer('')
-observer.add_observable('num_bodies')
+observer = obs.Observer('')
+observer.init_default_set()
+observer.set_run_type('cluster')
+observer.set_outfile('example.gsd')
 
 
 ####################################################################

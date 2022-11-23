@@ -141,6 +141,8 @@ dmypy.json
 *.log
 *.npy
 *.npz
+*.np
+*.cl
 
 #pickled objects
 *.pkl
