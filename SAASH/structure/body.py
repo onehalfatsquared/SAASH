@@ -221,7 +221,7 @@ class Body:
         dist = distance(self.__position, position, box)
 
         #compare to given cutoff
-        if (particle_distance < cutoff):
+        if (dist < cutoff):
             return True
         
         return False
@@ -479,6 +479,8 @@ def get_body_center_dict(snap, sim, unique_bods):
 
         #extract position and type of the body
         pos   = snap.particles.position[i]
+        if (sim.dim == 2):
+            pos = pos[0:2]
         p_type = snap.particles.types[snap.particles.typeid[i]]
 
         # append this info to the dictionary
@@ -518,6 +520,7 @@ def create_body(filtered_pos, filtered_bod, filtered_types, body_info_dict, body
     #get the positions and types or particles at the indices set by this submask
     particle_positions = filtered_pos[sub_mask]
     particle_types     = filtered_types[sub_mask]
+
 
     #create the body, set its position and type from the dict, append it to the list
     current_body = Body(particle_positions, particle_types, body_index)

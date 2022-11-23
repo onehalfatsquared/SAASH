@@ -426,7 +426,7 @@ def get_group_sizes(G):
 
     '''init a dictionary to store histogram data
        number of clusters (value) of each size (key)'''
-    size_dict = defaultdict(0)
+    size_dict = defaultdict(int)
 
     #loop over groups and increment the corresponding size index
     for group in G:

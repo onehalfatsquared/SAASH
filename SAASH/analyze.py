@@ -35,8 +35,10 @@ import numpy as np
 import pandas as pd
 
 import warnings
-import sys
+import sys, select
 import os
+
+import pickle
 
 from .structure import body as body
 from .structure import cluster as cluster
@@ -113,8 +115,6 @@ def get_size_distribution(snap, sim):
 def analyze_nano(snap, sim, observer):
     #analyze clusters of subunits and their connectivity
 
-    # TODO update this function to work for nanoparticles
-
     #get a list of bodies to analyze
     bodies = body.create_bodies(snap, sim)
 
@@ -124,7 +124,6 @@ def analyze_nano(snap, sim, observer):
     #init arrays to store things
     all_q = []
 
-
     #loop over each nanoparticle
     for nanoparticle in nanoparticles:
 
@@ -133,7 +132,7 @@ def analyze_nano(snap, sim, observer):
         center = nanoparticle.get_position()
 
         #filter the bodies that are within the cutoff radius of the nanoparticle
-        filtered_bodies = [bod for bod in bodies if bod.is_nearby(center, radius, sim.box)]
+        filtered_bodies = [bod for bod in bodies if bod.is_nearby(center, radius, sim.box_dim)]
 
         #init a dict to store the bonds - init with empty lists for each body_id
         bond_dict = dict()
@@ -146,23 +145,24 @@ def analyze_nano(snap, sim, observer):
         #determine groups of bonded structures
         G = cluster.get_groups(bond_dict)
 
-        #check if there are no clusters on the nanoparticle
-        if len(G) == 0:
-            all_q.append((len(filtered_bodies), 0, 0))
-
         #get largest cluster size
-        G_len = [len(G[i]) for i in range(len(G))]
-        largest_cluster_size = np.max(G_len)
+        G_lens = [len(G[i]) for i in range(len(G))]
+        largest_cluster_size = np.max(G_lens)
 
-        #get the number of bonds
-        largest_cluster_id = np.argmax(G_len)
+        #check if there are no clusters on the nanoparticle
+        if largest_cluster_size == 1:
+            all_q.append((len(filtered_bodies), 0, 0))
+            continue
+
+        #get the number of bonds in the largest cluster
+        largest_cluster_id = np.argmax(G_lens)
         largest_cluster    = G[largest_cluster_id]
         bonds = 0
         for particle in largest_cluster:
             bonds += len(bond_dict[particle])
 
         #get the number adsorbed
-        num_adsorbed = np.sum(G_len)
+        num_adsorbed = len(filtered_bodies)
 
         all_q.append((num_adsorbed, largest_cluster_size, int(bonds / 2)))
 
@@ -173,17 +173,33 @@ def analyze_nano(snap, sim, observer):
 ################# Main Drivers for each Run Type ###################
 ####################################################################
 
+def print_progress(frame_num, frames, jump):
+    #print progress updates when the frames is multiples of 10% of the total
+
+    thresh = 0.1 * frames
+    ratio  = int(frame_num / thresh)
+    prev   = int((frame_num-jump) / thresh)
+
+    if ratio != prev:
+        print("Analyzed frame {} of {}".format(frame_num, frames))
+    
+    return 
+
 def check_observer(observer, gsd_file):
     #check if there is a supplied observer. if not, init default and give warning
 
     if observer is None:
 
+        print("\nWARNING: Observer not specified. Using default observer:")
+        print("Will track individual clusters and their size as they evolve.")
+        print("Press any key to confirm within the next 15 seconds and continue...")
+
+        i, o, e = select.select( [sys.stdin], [], [], 15 )
+        if not i:
+            raise RuntimeError("Default observer not confirmed. Exiting...")
+
         observer = obs.Observer(gsd_file=gsd_file)
         observer.init_default_set()
-
-        print("WARNING: Observer not specified. Using default observer:\n")
-        print("Will track individual clusters and their size as they evolve.\n")
-        pause = input("Press any key to confirm and continue...")
 
     return observer
 
@@ -203,8 +219,12 @@ def handle_cluster(snaps, frames, sim, observer, jump = 1):
     old_frame = frame.get_data_from_snap(snaps.read_frame(f0-1), sim, f0-1)
     old_frame.create_first_frame(cluster_info, f0-1, observer)
 
+    print("\nBeginning Cluster Analysis")
+
     #loop over each frame and perform the analysis
     for frame_num in range(f0, frames, jump):
+
+        print_progress(frame_num, frames, jump)
 
         #get the monomer fraction and ids from the previous frame
         mon_fracs.append(old_frame.get_monomer_fraction())
@@ -229,7 +249,7 @@ def write_cluster_output(out_data, observer):
 
     with open(outfile, 'wb') as f:
         pickle.dump(out_data, f)
-        print("Cluster info pickled into file {}".format(outfile))
+        print("Cluster info pickled into file: {}".format(outfile))
 
     return
 
@@ -241,14 +261,19 @@ def handle_bulk(snaps, frames, sim, observer, jump = 1):
     all_sizes   = []
     all_largest = []
 
+    print("\nBeginning Bulk Analysis")
+
     #loop over each frame and perform the analysis
-    for frame in range(0, frames, jump):
+    for frame_num in range(0, frames, jump):
+
+        print_progress(frame_num, frames, jump)
 
         #get the snapshot for the current frame
-        snap = snaps.read_frame(frame)
+        snap = snaps.read_frame(frame_num)
 
         #get the size distribution and append to lists
         q = get_size_distribution(snap, sim)
+
         all_sizes.append(q[0])
         all_largest.append(q[1])
 
@@ -267,16 +292,24 @@ def write_bulk_output(out_data, frames, observer, jump = 1):
     fout = open(outfile, 'w') 
 
     #write the data
-    for frame in range(0, frames, jump)
-        fout.write("{} ".format(frame))
-        for i in range(max_size-1):
-            fout.write("{} ".format(cluster_sizes[i+1]))
-        fout.write("{}".format(largest_sizes[i+1]))
+    frame_counter = 0
+    for frame_num in range(0, frames, jump):
+
+        #convert dict to cluster array
+        cluster_size_array = [cluster_sizes[frame_counter][i] for i in range(max_size+1)] 
+
+        #write output
+        fout.write("{} ".format(frame_num))
+        for i in range(max_size):
+            fout.write("{} ".format(cluster_size_array[i+1]))
+        fout.write("{}".format(largest_sizes[frame_counter]))
         fout.write("\n")
+
+        frame_counter += 1
 
     #close the file
     fout.close()
-    print("Cluster sizes written to file {}".format(outfile))
+    print("Cluster sizes written to file: {}".format(outfile))
 
     return
 
@@ -294,11 +327,15 @@ def handle_nanoparticle(snaps, frames, sim, observer, jump = 1):
 
     nano_data = []
 
+    print("\nBeginning Nanoparticle Analysis")
+
     #loop over each frame and perform the analysis
-    for frame in range(0, frames, jump):
+    for frame_num in range(0, frames, jump):
+
+        print_progress(frame_num, frames, jump)
 
         #get the snapshot for the current frame
-        snap = snaps.read_frame(frame)
+        snap = snaps.read_frame(frame_num)
 
         #get the cluster data for each nanpoparticle
         q = analyze_nano(snap, sim, observer)
@@ -316,20 +353,23 @@ def write_nanoparticle_output(out_data, frames, observer, jump = 1):
 
     num_nanos = len(out_data[0])
 
-    for frame in range(0, frames, jump):
+    frame_counter = 0
+    for frame_num in range(0, frames, jump):
 
         #grab this frames data
-        q = out_data[frame]
+        q = out_data[frame_counter]
 
         #print the data to file
-        fout.write("{}".format(frame))
+        fout.write("{}".format(frame_num))
         for nano in range(num_nanos):
             fout.write(",%s,%s,%s"%(q[nano][0], q[nano][1], q[nano][2]))
         fout.write("\n")
 
+        frame_counter += 1
+
     #close the file
     fout.close()
-    print("Cluster sizes written to file {}".format(outfile))
+    print("Nanoparticle assembly info written to file: {}".format(outfile))
 
     return
 
@@ -359,17 +399,17 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", observer = N
     #fork the analysis base don the run type
     if run_type == 'cluster':
 
-        out_data = handle_cluster(snaps, frames, sim, observer)
+        out_data = handle_cluster(snaps, frames, sim, observer,jump=jump)
         write_cluster_output(out_data, observer)
 
     elif run_type == 'bulk':
 
-        out_data = handle_bulk(snaps, frames, sim, observer)
+        out_data = handle_bulk(snaps, frames, sim, observer, jump=jump)
         write_bulk_output(out_data, frames, observer, jump=jump)
 
     elif run_type == 'nanoparticle':
 
-        out_data = handle_nanoparticle(snaps, frames, sim, observer)
+        out_data = handle_nanoparticle(snaps, frames, sim, observer, jump=jump)
         write_nanoparticle_output(out_data, frames, observer, jump=jump)
 
 

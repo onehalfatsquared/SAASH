@@ -32,6 +32,9 @@ class Observer:
 
     def __init__(self, gsd_file = None, run_type = None):
 
+        #print init message
+        print("\nConstructing an Observer")
+
         #set the allowed run type options and corresponding outfile extensions
         self.__allowed_run_types = ['bulk', 'nanoparticle', 'cluster']
         self.__file_extensions   = {'bulk':'.cl', 'nanoparticle':'.np', 'cluster':'.pkl'}
@@ -48,7 +51,7 @@ class Observer:
         #use the gsd file to determine an output file for this run
         self.__gsd_file = gsd_file
         self.__outfile  = None
-        if gsd_file and self.__run_type:
+        if self.__gsd_file and self.__run_type:
             self.__set_outfile_name(gsd_file)
 
 
@@ -58,6 +61,7 @@ class Observer:
     def add_observable(self, observable):
 
         self.__observable_set.add(observable)
+        print("Observable {} added to observer".format(observable))
         return
 
     def get_observables(self):
@@ -66,7 +70,7 @@ class Observer:
 
     def get_outfile(self):
 
-        return self.__out_file
+        return self.__outfile
 
     def get_run_type(self):
 
@@ -87,7 +91,7 @@ class Observer:
 
         self.__observable_set = set(['num_bodies'])
         self.set_run_type('cluster')
-        if self.__gsd_file and not self.__out_file:
+        if self.__gsd_file and not self.__outfile:
             self.set_outfile(self.__gsd_file)
 
         return
@@ -157,6 +161,6 @@ class Observer:
 
         prefix = gsd_file.split('.gsd')[0]
         self.__outfile = prefix + self.__file_extensions[self.__run_type]
-        print("Output file set as: {}".format(self.__outfile))
+        print("Output file set as: {}\n".format(self.__outfile))
 
         return

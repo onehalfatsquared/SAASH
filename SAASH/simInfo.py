@@ -79,6 +79,7 @@ class SimInfo:
         self.ngrid = None
         self.__create_neighbor_grid()
 
+        print("\n")
 
         #check if the number of particles is zero and throw error
         if (self.num_bodies == 0):
@@ -92,6 +93,8 @@ class SimInfo:
                           "but no particles of this type were found in the trajectory. "\
                           "Continuing as if no nanoparticle is present. ")
             self.nano_flag = False
+
+        return
 
 
     def __parse_interactions(self, ixn_file):
@@ -198,6 +201,7 @@ class SimInfo:
 
         #set the number of bodies as the length of the body_set
         self.num_bodies = len(body_set)
+        print("This simulation output contains {} subunits".format(self.num_bodies))
 
         #loop over all nano types to get number of nanoparticles
         body_set = set()
@@ -209,6 +213,7 @@ class SimInfo:
 
         #set the number of nanoparticles as the length of the body_set
         self.num_nanos = len(nano_list)
+        print("This simulation output contains {} nanoparticles".format(self.num_nanos))
 
         return
 

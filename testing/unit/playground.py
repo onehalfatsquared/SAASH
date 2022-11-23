@@ -28,8 +28,8 @@ from structure import cluster
 from structure import frame
 from util import neighborgrid
 
-import analyzeStructures_refactor as test
-import analyzeStructures as original
+import analyze as test
+import old.analyzeStructures as original
 
 
 def distance(x0, x1, dimensions):
