@@ -10,17 +10,19 @@ To be added to later.
 #Package Install Instructions (For Now)
 To be able to import this code as a package outside of the source directory, I have been using a python setup file to make a pip package and install it. It is not published yet (maybe I will do this eventually, after finalizing and documenting some things), but this works for now. 
 
-From the SAASH directory (that contains setup.py), run the following commands:
+If you are installing to a local machine, first clone into the repo. From the highest SAASH directory (that contains setup.py), run the following commands:
 
 python setup.py build
 
 python setup.py install
 
 
-This should allow SAASH to be imported from anywhere. If this does not work, an alternative approach has been to do the following:
+This should allow SAASH to be imported from anywhere. 
+
+If the above approach does not work, or you are installing to somewhere where you do not have sudo priveleges (like a compute cluster), an alternative approach has been to do the following:
 
 python setup.py bdist_wheel
 
 pip install dist/SAASH-0.1.0-py3-none-any.whl --force-reinstall
 
-but this approach requires the wheel and twine packages. 
+I think this approach requires the wheel and twine packages. The exact filename inside the dist folder may change, so just look for the .whl file when running the command. 
