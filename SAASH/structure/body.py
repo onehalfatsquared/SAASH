@@ -214,6 +214,18 @@ class Body:
 
         return False
 
+    def is_nearby(self, position, cutoff, box):
+        #return true if particle is within cutoff of given position
+
+        #get the periodic distance between the body and pos
+        dist = distance(self.__position, position, box)
+
+        #compare to given cutoff
+        if (particle_distance < cutoff):
+            return True
+        
+        return False
+
     def bind(self, body):
         #append the body to the hosts bond list
 

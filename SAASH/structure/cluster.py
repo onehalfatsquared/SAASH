@@ -26,6 +26,8 @@ import warnings
 import sys
 import os
 
+from collections import defaultdict
+
 from . import body as body
 from . import frame as frame
 
@@ -424,7 +426,7 @@ def get_group_sizes(G):
 
     '''init a dictionary to store histogram data
        number of clusters (value) of each size (key)'''
-    size_dict = dict()
+    size_dict = defaultdict(0)
 
     #loop over groups and increment the corresponding size index
     for group in G:

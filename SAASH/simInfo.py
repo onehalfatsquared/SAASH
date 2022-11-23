@@ -146,7 +146,7 @@ class SimInfo:
                     nano_types.add(entries[0])
 
                 else:
-                    raise ValueError("The interaction file contains a row with an unsupported"\
+                    raise IndexError("The interaction file contains a row with an unsupported"\
                                      " number of entries. We require either 3 entries to define"\
                                      " a bond, or 2 entries to define a nanoparticle. ")
 
