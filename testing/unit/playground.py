@@ -1,6 +1,6 @@
 '''
 
-This is for dong various experiments to help with implemnting features
+This is for doing various experiments to help with implemnting features
 
 '''
 import hoomd
@@ -293,3 +293,6 @@ if __name__ == "__main__":
     # cProfile.run('run_profile()', 'restats')
     # p = pstats.Stats('restats')
     # p.strip_dirs().sort_stats('tottime').print_stats(15)
+
+
+
