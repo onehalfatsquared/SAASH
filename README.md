@@ -23,6 +23,6 @@ If the above approach does not work, or you are installing to somewhere where yo
 
 python setup.py bdist_wheel
 
-pip install dist/SAASH-0.1.0-py3-none-any.whl --force-reinstall
+pip install dist/SAASH-0.1.0-py3-none-any.whl --force-reinstall --user
 
 I think this approach requires the wheel and twine packages. The exact filename inside the dist folder may change, so just look for the .whl file when running the command. 
