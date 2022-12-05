@@ -11,10 +11,10 @@ from SAASH.util import observer as obs
 import sys
 
 
-def setup_observer(gsd_file, run_type, observables = None):
+def setup_observer(gsd_file, run_type, observables = None, jump=jump):
 
     #init an observables with the file and run type
-    observer = obs.Observer(gsd_file, run_type)
+    observer = obs.Observer(gsd_file, run_type, jump = jump)
 
     #for cluster runs, set up all the desired observables
     if run_type == 'cluster' and observables is not None:
@@ -22,8 +22,8 @@ def setup_observer(gsd_file, run_type, observables = None):
             observer.add_observable(observable)
 
     #change the start and end frames
-    observer.set_first_frame(100)
-    observer.set_final_frame(400)
+    # observer.set_first_frame(100)
+    # observer.set_final_frame(400)
 
     return observer
 
@@ -40,10 +40,10 @@ if __name__ == "__main__":
         raise
 
     #do a bulk analysis run - tracks number of clusters of each size every jump frames
-    observer = setup_observer(gsd_file, 'bulk')
-    analyze.run_analysis(gsd_file, ixn_file=ixn_file, jump=jump, observer=observer)
+    observer = setup_observer(gsd_file, 'bulk', jump=jump)
+    analyze.run_analysis(gsd_file, ixn_file=ixn_file, observer=observer)
 
     #do a cluster analysis with num_bodies as an observable
     observables = ['num_bodies']
     observer = setup_observer(gsd_file, 'cluster', observables=observables)
-    analyze.run_analysis(gsd_file, ixn_file=ixn_file, jump=jump, observer=observer)
+    analyze.run_analysis(gsd_file, ixn_file=ixn_file, observer=observer)

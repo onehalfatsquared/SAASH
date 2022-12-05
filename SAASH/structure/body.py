@@ -65,6 +65,7 @@ class Bond:
         self.__type1  = type1
         self.__type2  = type2
         self.__cutoff = cutoff
+        self.__cutoff2= cutoff * cutoff
 
         #give the bond a descriptive strign name - "type1-type2"
         self.__bond_name = type1 + "-" + type2
@@ -78,6 +79,10 @@ class Bond:
     def get_cutoff(self):
 
         return self.__cutoff
+
+    def get_cutoff2(self):
+
+        return self.__cutoff2
 
     def get_name(self):
 
@@ -98,14 +103,14 @@ class Particle:
         self.__body_id  = body.get_id()
 
 
-    def is_bonded(self, particle, cutoff, box):
+    def is_bonded(self, particle, cutoff2, box):
         #determine if this particle is bonded to the given particle
 
         #get the periodic distance between the particles
-        particle_distance = distance(self.__position, particle.get_position(), box)
+        particle_distance2 = distance2(self.__position, particle.get_position(), box)
 
         #compare to given cutoff
-        if (particle_distance < cutoff):
+        if (particle_distance2 < cutoff2):
             return True
         
         return False
@@ -194,7 +199,7 @@ class Body:
             self.__particles.append(particle)
 
             #add this particle ID to the type dictionary
-            if (particle_type[i] in self.__particle_type_map.keys()):
+            if (particle_type[i] in self.__particle_type_map):
 
                 self.__particle_type_map[particle_type[i]].append(i)
             else:
@@ -214,14 +219,14 @@ class Body:
 
         return False
 
-    def is_nearby(self, position, cutoff, box):
+    def is_nearby(self, position, cutoff2, box):
         #return true if particle is within cutoff of given position
 
         #get the periodic distance between the body and pos
-        dist = distance(self.__position, position, box)
+        dist2 = distance2(self.__position, position, box)
 
         #compare to given cutoff
-        if (dist < cutoff):
+        if (dist2 < cutoff2):
             return True
         
         return False
@@ -304,6 +309,19 @@ def distance(x0, x1, dimensions):
 
     #compute and return the distance between the correct set of images
     return np.sqrt((delta ** 2).sum(axis=-1))
+
+def distance2(x0, x1, dimensions):
+    #get the squared distance between the points x0 and x1
+    #assumes periodic BC with box dimensions given in dimensions
+
+    #get distance between particles in each dimension
+    delta = np.abs(x0 - x1)
+
+    #if distance is further than half the box, use the closer image
+    delta = np.where(delta > 0.5 * dimensions, delta - dimensions, delta)
+
+    #compute and return the distance between the correct set of images
+    return (delta ** 2).sum(axis=-1)
 
 
 def get_particle_info(snap):
@@ -395,6 +413,8 @@ def check_body_pair(body1, body2, sim, bond_dict):
     ''' Check if the pair of bodies contains particles that are within the cutoff of a 
         given bond type. If one is found, we assume the bodies are bonded and stop 
         checking for further bonds
+
+        Checks that the squared distance is less than squared cutoff
     '''
 
     #loop over each bond type 
@@ -402,7 +422,7 @@ def check_body_pair(body1, body2, sim, bond_dict):
 
         #get the two particle types involved in this bond
         type1, type2 = bond.get_types()
-        cutoff       = bond.get_cutoff()
+        cutoff       = bond.get_cutoff2()
 
         #first get all type 1 on body 1 and type 2 on body 2
         particles1 = body1.get_particles_by_type(type1)

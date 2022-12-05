@@ -150,3 +150,6 @@ dmypy.json
 #images
 *.png
 *.jpg
+
+#profiling output
+*restats*

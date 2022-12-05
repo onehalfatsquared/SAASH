@@ -368,7 +368,7 @@ def get_groups(bond_dict):
     #construct arrays containing groups of all bonded bodies
 
     #compute total number of bodies as number of keys in the bond_dict
-    total_states = len(bond_dict.keys())
+    total_states = len(bond_dict)
 
     #init an array to store mappings to groups
     to_group = -1 * np.ones(total_states, dtype=int)
@@ -432,7 +432,7 @@ def get_group_sizes(G):
     for group in G:
 
         L = len(group)
-        if L not in size_dict.keys():
+        if L not in size_dict:
             size_dict[L] = 1
         else:
             size_dict[L] += 1

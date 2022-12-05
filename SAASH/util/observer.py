@@ -30,7 +30,7 @@ import sys
 
 class Observer:
 
-    def __init__(self, gsd_file = None, run_type = None):
+    def __init__(self, gsd_file = None, run_type = None, jump=1):
 
         #print init message
         print("\nConstructing an Observer")
@@ -45,6 +45,7 @@ class Observer:
         #init defaults for frames
         self.__first_frame = 0
         self.__final_frame = None
+        self.__jump        = jump
 
 
         #init variable to store the runtype
@@ -90,6 +91,10 @@ class Observer:
     def get_final_frame(self):
 
         return self.__final_frame
+
+    def get_frame_jump(self):
+
+        return self.__jump
 
 
     def set_first_frame(self, first_frame):

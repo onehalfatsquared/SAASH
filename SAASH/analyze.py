@@ -130,9 +130,10 @@ def analyze_nano(snap, sim, observer):
         #get the cutoff radius and center of the nanoparticle
         radius = nanoparticle.get_radius() * sim.radius_mult + sim.largest_bond_distance
         center = nanoparticle.get_position()
+        rad_cut = radius * radius
 
         #filter the bodies that are within the cutoff radius of the nanoparticle
-        filtered_bodies = [bod for bod in bodies if bod.is_nearby(center, radius, sim.box_dim)]
+        filtered_bodies = [bod for bod in bodies if bod.is_nearby(center, rad_cut, sim.box_dim)]
 
         #init a dict to store the bonds - init with empty lists for each body_id
         bond_dict = dict()
@@ -173,15 +174,21 @@ def analyze_nano(snap, sim, observer):
 ################# Main Drivers for each Run Type ###################
 ####################################################################
 
-def print_progress(frame_num, frames, jump):
+def print_progress(frame_num, observer):
     #print progress updates when the frames is multiples of 10% of the total
 
-    thresh = 0.1 * frames
-    ratio  = int(frame_num / thresh)
-    prev   = int((frame_num-jump) / thresh)
+    #ectract frame info from the observer
+    jump        = observer.get_frame_jump()
+    start_frame = observer.get_first_frame()
+    final_frame = observer.get_final_frame()
+
+    #determine every 10% of the way there
+    thresh = 0.1 * (final_frame - start_frame)
+    ratio  = int((frame_num - start_frame)/ thresh)
+    prev   = int((frame_num - start_frame - jump) / thresh)
 
     if ratio != prev:
-        print("Analyzed frame {} of {}".format(frame_num, frames))
+        print("Analyzed frame {} of {}".format(frame_num, final_frame))
     
     return 
 
@@ -226,11 +233,12 @@ def handle_cluster(snaps, frames, sim, observer, jump = 1):
     old_frame.create_first_frame(cluster_info, f0-1, observer)
 
     print("\nBeginning Cluster Analysis")
+    jump = observer.get_frame_jump()
 
     #loop over each frame and perform the analysis
     for frame_num in range(f0, observer.get_final_frame(), jump):
 
-        print_progress(frame_num, frames, jump)
+        print_progress(frame_num, observer)
 
         #get the monomer fraction and ids from the previous frame
         mon_fracs.append(old_frame.get_monomer_fraction())
@@ -260,7 +268,7 @@ def write_cluster_output(out_data, observer):
     return
 
 
-def handle_bulk(snaps, frames, sim, observer, jump = 1):
+def handle_bulk(snaps, frames, sim, observer):
     #analyze data according to bulk output. Get cluster size distribution
 
     #init lists to store the cluster size distribution and the largest cluster
@@ -268,11 +276,12 @@ def handle_bulk(snaps, frames, sim, observer, jump = 1):
     all_largest = []
 
     print("\nBeginning Bulk Analysis")
+    jump = observer.get_frame_jump()
 
     #loop over each frame and perform the analysis
     for frame_num in range(observer.get_first_frame(), observer.get_final_frame(), jump):
 
-        print_progress(frame_num, frames, jump)
+        print_progress(frame_num, observer)
 
         #get the snapshot for the current frame
         snap = snaps.read_frame(frame_num)
@@ -298,6 +307,7 @@ def write_bulk_output(out_data, frames, observer, jump = 1):
     fout = open(outfile, 'w') 
 
     #write the data
+    jump = observer.get_frame_jump()
     frame_counter = 0
     for frame_num in range(observer.get_first_frame(), observer.get_final_frame(), jump):
 
@@ -319,7 +329,7 @@ def write_bulk_output(out_data, frames, observer, jump = 1):
 
     return
 
-def handle_nanoparticle(snaps, frames, sim, observer, jump = 1):
+def handle_nanoparticle(snaps, frames, sim, observer):
     #analyze data according to nanoparticle output. 
     #get info about assembly around the nanoparticle
 
@@ -334,11 +344,12 @@ def handle_nanoparticle(snaps, frames, sim, observer, jump = 1):
     nano_data = []
 
     print("\nBeginning Nanoparticle Analysis")
+    jump = observer.get_frame_jump()
 
     #loop over each frame and perform the analysis
     for frame_num in range(observer.get_first_frame(), observer.get_final_frame(), jump):
 
-        print_progress(frame_num, frames, jump)
+        print_progress(frame_num, observer)
 
         #get the snapshot for the current frame
         snap = snaps.read_frame(frame_num)
@@ -350,7 +361,7 @@ def handle_nanoparticle(snaps, frames, sim, observer, jump = 1):
 
     return nano_data
 
-def write_nanoparticle_output(out_data, frames, observer, jump = 1):
+def write_nanoparticle_output(out_data, frames, observer):
     #print cluster info around each nanoparticle
 
     #get the output file name from observer and open it for writing
@@ -358,6 +369,7 @@ def write_nanoparticle_output(out_data, frames, observer, jump = 1):
     fout = open(outfile, 'w') 
 
     num_nanos = len(out_data[0])
+    jump = observer.get_frame_jump()
 
     frame_counter = 0
     for frame_num in range(observer.get_first_frame(), observer.get_final_frame(), jump):
@@ -385,7 +397,7 @@ def write_nanoparticle_output(out_data, frames, observer, jump = 1):
 
 
 
-def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", observer = None):
+def run_analysis(gsd_file, ixn_file = "interactions.txt", observer = None):
     #get number of monomers and dimers at each frame in the sim
 
     #get the collection of snapshots and get number of frames
@@ -405,18 +417,18 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", observer = N
     #fork the analysis base don the run type
     if run_type == 'cluster':
 
-        out_data = handle_cluster(snaps, frames, sim, observer,jump=jump)
+        out_data = handle_cluster(snaps, frames, sim, observer)
         write_cluster_output(out_data, observer)
 
     elif run_type == 'bulk':
 
-        out_data = handle_bulk(snaps, frames, sim, observer, jump=jump)
-        write_bulk_output(out_data, frames, observer, jump=jump)
+        out_data = handle_bulk(snaps, frames, sim, observer)
+        write_bulk_output(out_data, frames, observer)
 
     elif run_type == 'nanoparticle':
 
-        out_data = handle_nanoparticle(snaps, frames, sim, observer, jump=jump)
-        write_nanoparticle_output(out_data, frames, observer, jump=jump)
+        out_data = handle_nanoparticle(snaps, frames, sim, observer)
+        write_nanoparticle_output(out_data, frames, observer)
 
 
     return 0
