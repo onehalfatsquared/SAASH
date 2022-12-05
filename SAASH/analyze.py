@@ -185,7 +185,7 @@ def print_progress(frame_num, frames, jump):
     
     return 
 
-def check_observer(observer, gsd_file):
+def check_observer(observer, gsd_file, sim):
     #check if there is a supplied observer. if not, init default and give warning
 
     if observer is None:
@@ -201,6 +201,12 @@ def check_observer(observer, gsd_file):
         observer = obs.Observer(gsd_file=gsd_file)
         observer.init_default_set()
 
+    #check if frame requirements are met for final frame. Set to default if not overwritten
+    if observer.get_final_frame() is None or observer.get_final_frame() > sim.frames:
+
+        observer.set_final_frame(sim.frames)
+
+
     return observer
 
 
@@ -215,14 +221,14 @@ def handle_cluster(snaps, frames, sim, observer, jump = 1):
     monomer_id_sets = []
 
     #analyze the first frame seperately
-    f0 = 1
+    f0 = observer.get_first_frame() + 1
     old_frame = frame.get_data_from_snap(snaps.read_frame(f0-1), sim, f0-1)
     old_frame.create_first_frame(cluster_info, f0-1, observer)
 
     print("\nBeginning Cluster Analysis")
 
     #loop over each frame and perform the analysis
-    for frame_num in range(f0, frames, jump):
+    for frame_num in range(f0, observer.get_final_frame(), jump):
 
         print_progress(frame_num, frames, jump)
 
@@ -264,7 +270,7 @@ def handle_bulk(snaps, frames, sim, observer, jump = 1):
     print("\nBeginning Bulk Analysis")
 
     #loop over each frame and perform the analysis
-    for frame_num in range(0, frames, jump):
+    for frame_num in range(observer.get_first_frame(), observer.get_final_frame(), jump):
 
         print_progress(frame_num, frames, jump)
 
@@ -293,7 +299,7 @@ def write_bulk_output(out_data, frames, observer, jump = 1):
 
     #write the data
     frame_counter = 0
-    for frame_num in range(0, frames, jump):
+    for frame_num in range(observer.get_first_frame(), observer.get_final_frame(), jump):
 
         #convert dict to cluster array
         cluster_size_array = [cluster_sizes[frame_counter][i] for i in range(max_size+1)] 
@@ -330,7 +336,7 @@ def handle_nanoparticle(snaps, frames, sim, observer, jump = 1):
     print("\nBeginning Nanoparticle Analysis")
 
     #loop over each frame and perform the analysis
-    for frame_num in range(0, frames, jump):
+    for frame_num in range(observer.get_first_frame(), observer.get_final_frame(), jump):
 
         print_progress(frame_num, frames, jump)
 
@@ -354,7 +360,7 @@ def write_nanoparticle_output(out_data, frames, observer, jump = 1):
     num_nanos = len(out_data[0])
 
     frame_counter = 0
-    for frame_num in range(0, frames, jump):
+    for frame_num in range(observer.get_first_frame(), observer.get_final_frame(), jump):
 
         #grab this frames data
         q = out_data[frame_counter]
@@ -391,7 +397,7 @@ def run_analysis(gsd_file, jump = 1, ixn_file = "interactions.txt", observer = N
     sim = SimInfo(snap, frames, ixn_file = ixn_file)
 
     #check for observer. if not found create default observer with a warning
-    observer = check_observer(observer, gsd_file)
+    observer = check_observer(observer, gsd_file, sim)
 
     #get run type info from the observer
     run_type = observer.get_run_type()

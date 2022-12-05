@@ -30,7 +30,7 @@ class SimInfo:
     def __init__(self, snap, frames, ixn_file = "interactions.txt", cutoff_mult = 1.35, radius_mult = 1.2):
 
         #print an initialization message
-        print("Initializing SimInfo and Neighborgrid...")
+        print("\nInitializing SimInfo and Neighborgrid...")
 
         #set the directly given variables
         self.frames = frames

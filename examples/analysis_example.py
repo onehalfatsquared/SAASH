@@ -21,6 +21,10 @@ def setup_observer(gsd_file, run_type, observables = None):
         for observable in observables:
             observer.add_observable(observable)
 
+    #change the start and end frames
+    observer.set_first_frame(100)
+    observer.set_final_frame(400)
+
     return observer
 
 

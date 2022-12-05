@@ -42,6 +42,10 @@ class Observer:
         #init a set of observables to compute
         self.__observable_set = set()
 
+        #init defaults for frames
+        self.__first_frame = 0
+        self.__final_frame = None
+
 
         #init variable to store the runtype
         self.__run_type = None
@@ -64,6 +68,9 @@ class Observer:
         print("Observable {} added to observer".format(observable))
         return
 
+
+
+
     def get_observables(self):
 
         return self.__observable_set
@@ -75,6 +82,36 @@ class Observer:
     def get_run_type(self):
 
         return self.__run_type
+
+    def get_first_frame(self):
+
+        return self.__first_frame
+
+    def get_final_frame(self):
+
+        return self.__final_frame
+
+
+    def set_first_frame(self, first_frame):
+
+        if (first_frame < 0):
+            raise ValueError("Starting frame ({}) must be non-negative.".format(first_frame))
+
+        self.__first_frame = first_frame
+
+        print("First frame to analyze set to {}".format(first_frame))
+        return
+
+    def set_final_frame(self, final_frame):
+
+        if (final_frame < self.__first_frame):
+            raise ValueError("Final frame ({}) must be greater than first frame ({})".format(
+                              final_frame, self.__first_frame))
+        self.__final_frame = final_frame
+
+        print("Final frame to analyze set to {}".format(final_frame))
+        return
+
 
     def init_test_set(self):
         #init the observable set to those helpful for testing
