@@ -11,7 +11,7 @@ from SAASH.util import observer as obs
 import sys
 
 
-def setup_observer(gsd_file, run_type, observables = None, jump=jump):
+def setup_observer(gsd_file, run_type, observables = None, jump=1):
 
     #init an observables with the file and run type
     observer = obs.Observer(gsd_file, run_type, jump = jump)
