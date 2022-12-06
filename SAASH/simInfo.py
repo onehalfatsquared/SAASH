@@ -317,7 +317,7 @@ class SimInfo:
 
             #init variable to keep track of max distance, iterate over particles
             max_particle_dist = 0
-            for i in range(1,len(double_masked_pos)):
+            for i in range(len(double_masked_pos)):
 
                 particle_dist = body.distance(center_pos, double_masked_pos[i], self.box_dim)
                 if (particle_dist > max_particle_dist):
