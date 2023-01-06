@@ -87,14 +87,19 @@ class Cluster:
     def update(self, cluster):
         #update a cluster with up to date member bodies
 
-        #set the body list to match given cluster. 
+        #remove all old ids from previous bodies
+        self.__remove_body_ids()
+
+        #set a new body list to match given cluster. 
         self.__bodies = cluster.get_bodies()
 
-        #Update those bodies with this cluster id
-        self.__update_bodies(self.__bodies)
+        #Update those bodies with this cluster's id
+        self.__update_body_ids()
 
         #update the frame of the last update
         self.__last_updated = cluster.get_last_updated()
+
+        return
 
 
     #setter functions
@@ -104,7 +109,7 @@ class Cluster:
         #also sets that id to each body, and gives the bodies a ref to cluster
 
         self.__cluster_index = c_id
-        self.__update_bodies(self.__bodies)
+        self.__update_body_ids()
 
         return
 
@@ -143,12 +148,17 @@ class Cluster:
 
         return self.__last_updated
 
-    def __update_bodies(self, bodies):
+    def __update_body_ids(self):
 
-        #update the bodies in the cluster to have the set id
+        #update the bodies in this cluster to have the cluster's id
         for bod in self.__bodies:
             bod.set_cluster_id(self, self.__cluster_index)
 
+    def __remove_body_ids(self):
+
+        #remove the cluster index from all bodies, for cases were bodies are lost
+        for bod in self.__bodies:
+            bod.set_cluster_id(self, -1)
 
 
 

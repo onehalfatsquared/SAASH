@@ -87,7 +87,7 @@ class Frame:
             #grab and remove the first cluster in queue
             cluster = queue.pop(0)
 
-            # print("Looking at cluster {}".format(cluster.get_body_ids()))
+            print("\nLooking at cluster {}".format(cluster.get_body_ids()))
 
             #determine which previous clusters are possible matches for the current cluster
             possibleMatches = cluster.get_possible_matches(old_bodies)
@@ -128,13 +128,15 @@ class Frame:
                 #if the difference is 1 or 0, same cluster or only lost one monomer
                 elif (sub_event == Event.PERSIST):
 
+                    print("Cluster Persist detected")
+                    print("Match is id {}, bodies {}".format(match.get_cluster_id(), match.get_body_ids()))
                     #check if this cluster is assigned already
                     if (match.get_cluster_id() in self.__label_dict):
 
                         #if the diff is 0 or 1, this is likely a better match, but check
                         if similarity < self.__label_dict[match.get_cluster_id()][0]:
 
-                            # print("Match is {}".format(match.get_body_ids()))
+                            print("Identity Stolen. Match is {}".format(match.get_body_ids()))
                             #steal the id from the matched cluster and add victim to queue
                             theft_victim = self.__assign_better_match(cluster, match, similarity)
                             queue.append(theft_victim)
@@ -151,9 +153,9 @@ class Frame:
 
                     #otherwise, just assign the match 
                     else:
+                        print("matched cluster to existing ", match.get_cluster_id(), " - ", cluster.get_body_ids())
                         self.__assign_match(cluster, match, similarity)
-                        # print("matched cluster to existing ", cluster_id)
-
+                        
             elif (event == Event.MERGE):
 
                 # print("Clusters have merged")
@@ -239,7 +241,7 @@ class Frame:
         new_cluster = clust.ClusterInfo(cluster, frame_num, current_monomer, observer)
         cluster_info.append(new_cluster)
 
-        # print("created new cluster with id ", cluster_num)
+        print("created new cluster with id ", cluster_num, ' - bodies ', cluster.get_body_ids())
 
         return
 
@@ -281,7 +283,7 @@ class Frame:
         cluster to be added back to the queue. 
         '''
 
-        # print("Cluster Split : Looking at {}".format(cluster.get_body_ids()))
+        print("Cluster Split : Looking at {} - {}".format(cluster.get_cluster_id(), cluster.get_body_ids()))
 
         #set frame num and monomer frac
         frame_num = self.get_frame_num()
@@ -297,7 +299,7 @@ class Frame:
             if similarity < self.__label_dict[match_id][0]:
 
                 theft_victim = self.__assign_better_match(cluster, match, similarity)
-                # print("Better match found. Updated cluster match to ", match_id)
+                print("Better match found. Updated cluster match to ", match_id, "\n")
 
                 #return the old cluster for reassignment to the queue
                 return theft_victim
@@ -331,7 +333,7 @@ class Frame:
         get absorbed to the new cluster and are set to be killed in the apply_update step. 
         '''
 
-        # print("Merge, looking at : ", cluster.get_body_ids())
+        print("Merge detected.")
 
         #get a list of possible matches, and assign a similarity to each
         possible_list   = list(possibleMatches)
@@ -363,15 +365,15 @@ class Frame:
             possibility = sorted_poss[poss_index]
             similarity  = sorted_similarity[poss_index]
 
-            # print("Possible match : ", possibility.get_body_ids(), similarity, possibility.get_cluster_id())
-
+            print("Possible match : ", possibility.get_body_ids(), similarity, possibility.get_cluster_id())
+            print("Match flag is {} currently".format(match_flag))
             #check if match not already assigned. If not, assign it. 
             match_id = possibility.get_cluster_id()
             if (not match_flag):
                 if (match_id not in self.__label_dict):
 
                     self.__assign_match(cluster, possibility, similarity)
-                    # print("Applied match to ", cluster.get_body_ids(), possibility.get_body_ids())
+                    print("Applied match to ", cluster.get_body_ids(), possibility.get_body_ids())
                     match_flag = True
                     assigned_id = match_id
 
@@ -397,8 +399,11 @@ class Frame:
         #if no match has been made after all possibilities, something went wrong?
         if not match_flag:
 
+            print("The program is about to crash. The ids in the label dict are:")
+            print(list(self.__label_dict.keys()),"\n")
+
             #i dont think its possible to get here, raise error if we do
-            raise("Unable to find a match for a merged cluster, which "\
+            raise RuntimeError("Unable to find a match for a merged cluster, which "\
                   "should be impossible. Exiting...")
 
     def __apply_updates(self, cluster_info, old_frame):
@@ -483,6 +488,8 @@ class Frame:
                 cluster_info[c_id].kill(frame_num)
 
 
+        print("Iteration {} complete. The current ids in the label dict are:".format(frame_num))
+        print(list(self.__label_dict.keys()),"\n")
 
         return
 
@@ -502,6 +509,10 @@ def get_similarity(old_cluster, new_cluster):
 
     #define a similarity, max of the two set differences
     similarity = max(len(old_not_new), len(new_not_old))
+
+    # print(old_not_new)
+    # print(new_not_old)
+    # print(similarity)
 
     #determine if the cluster has split into a potentially new cluster or not
     event = Event.PERSIST
