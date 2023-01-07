@@ -86,6 +86,7 @@ class Cluster:
 
     def update(self, cluster):
         #update a cluster with up to date member bodies
+        #NOTE: THIS FUNCTION SHOULD PROBABLY NOT BE USED IN THIS FRAMEWORK
 
         #remove all old ids from previous bodies
         self.__remove_body_ids()
