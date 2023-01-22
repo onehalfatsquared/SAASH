@@ -39,6 +39,9 @@ import sys, select
 import os
 
 import pickle
+import time
+
+from collections import defaultdict
 
 from .structure import body as body
 from .structure import cluster as cluster
@@ -74,42 +77,6 @@ class ClusterOut:
 ####################################################################
 ################# Structure Analysis Functions #####################
 ####################################################################
-
-def get_nano_centers(particle_info, particle_type):
-    #get the list of coordinates for all nanoparticle centers
-
-    #get the list of all particle info for that type
-    center_list = particle_info.loc[(particle_info['type'] == particle_type)]
-
-    #extract the coordinates from this list of data
-    c_coords = np.array([np.array(center_list['position_x'].values), 
-                         np.array(center_list['position_y'].values), 
-                         np.array(center_list['position_z'].values)]).T
-
-    #return the coordinates
-    return c_coords
-
-
-def get_size_distribution(snap, sim):
-    #return the number of clusters of each size, and the largest cluster
-
-    #get a list of bodies to analyze
-    bodies = body.create_bodies(snap, sim)
-
-    #init a dictionary to store the bonds present - init with empty lists for each body_id
-    bond_dict = dict()
-    for bod in bodies:
-        bond_dict[bod.get_id()] = []
-
-    #determine the bond network using the list of bodies
-    body.get_bonded_bodies(bodies, sim, bond_dict)
-
-    #determine groups of bonded structures
-    G = cluster.get_groups(bond_dict)
-
-    #count the sizes of each group
-    size_counts, largest_group_size = cluster.get_group_sizes(G)
-    return size_counts, largest_group_size
 
 
 def analyze_nano(snap, sim, observer):
@@ -271,9 +238,14 @@ def write_cluster_output(out_data, observer):
 def handle_bulk(snaps, frames, sim, observer):
     #analyze data according to bulk output. Get cluster size distribution
 
+    #check if the user wants details on microstates
+    focus_list = observer.get_focus_list()
+
     #init lists to store the cluster size distribution and the largest cluster
     all_sizes   = []
     all_largest = []
+    if focus_list is not None:
+        all_focused = []
 
     print("\nBeginning Bulk Analysis")
     jump = observer.get_frame_jump()
@@ -286,13 +258,25 @@ def handle_bulk(snaps, frames, sim, observer):
         #get the snapshot for the current frame
         snap = snaps.read_frame(frame_num)
 
-        #get the size distribution and append to lists
-        q = get_size_distribution(snap, sim)
+        #make a Frame object, get the size distribution and append to lists
+        fr = frame.get_data_from_snap(snap, sim, frame_num)
+        if focus_list is None:
 
-        all_sizes.append(q[0])
-        all_largest.append(q[1])
+            sizes, largest = fr.get_cluster_size_distribution(observer)
 
-    return all_sizes, all_largest
+        else:
+
+            sizes, largest, focus = fr.get_cluster_size_distribution(observer)
+            all_focused.append(focus)
+    
+        all_sizes.append(sizes)
+        all_largest.append(largest)
+
+    if focus_list is None:
+        return all_sizes, all_largest
+    
+    return all_sizes, all_largest, all_focused
+
 
 def write_bulk_output(out_data, frames, observer, jump = 1):
     #print the cluster size distribution to file in observer
@@ -327,7 +311,80 @@ def write_bulk_output(out_data, frames, observer, jump = 1):
     fout.close()
     print("Cluster sizes written to file: {}".format(outfile))
 
+    #check for focused sizes
+    focus_list = observer.get_focus_list()
+    if focus_list is not None:
+
+        for csize in focus_list:
+
+            focus_outfile = outfile.split('.')[0]+str(csize)+".cl"
+            write_focus_output(csize, out_data[2], focus_outfile, observer)
+
+
     return
+
+
+
+def write_focus_output(csize, all_focus, outfile, observer):
+    #print a separate file per cluster size, containing info on microstate distribution 
+
+    #open outfile
+    fout = open(outfile, 'w') 
+
+    #print the first line, giving the definitions of each microstate
+    fout.write("Microstates: ")
+
+    #do an initial pass through all time points to gather all microstates (as keys)
+    key_map = defaultdict(int)
+    for distribution in all_focus:
+
+        size_dist = distribution[csize]
+        for microstate in size_dist:
+
+            if microstate not in key_map:
+
+                key_map[microstate] = len(key_map) 
+                fout.write("( {} : {} ),".format(key_map[microstate], microstate))
+
+    fout.write("\n")
+
+    #check if the requested size has no members. if not, delete the file with message to user
+    if len(key_map) == 0:
+
+        fout.close()
+        os.remove(outfile)
+        print("No clusters of size {} found\n".format(csize))
+        return
+
+    #write the data
+    jump = observer.get_frame_jump()
+    frame_counter = 0
+    for frame_num in range(observer.get_first_frame(), observer.get_final_frame(), jump):
+
+        distribution = all_focus[frame_counter]
+        size_dist    = distribution[csize]
+
+        counts = [0 for i in range(len(key_map))]
+
+        for microstate in size_dist:
+
+            counts[key_map[microstate]] = size_dist[microstate]
+
+        #write all of them in indexed order
+        fout.write("{} ".format(frame_num))
+        for i in range(len(counts)):
+
+            fout.write("{} ".format(counts[i]))
+
+        fout.write("\n")
+
+        frame_counter += 1
+
+    #close the file
+    fout.close()
+    print("Cluster microstates (size {}) written to file: {}".format(csize, outfile))
+    return
+
 
 def handle_nanoparticle(snaps, frames, sim, observer):
     #analyze data according to nanoparticle output. 

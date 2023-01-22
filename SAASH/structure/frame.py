@@ -16,6 +16,9 @@ clusters, and monomer gain/loss.
 from . import body as body
 from . import cluster as clust
 
+import numpy as np
+from collections import defaultdict
+
 from enum import Enum
 
 class Event(Enum):
@@ -185,6 +188,82 @@ class Frame:
     def get_monomer_ids(self):
 
         return self.__monomer_ids
+
+    def get_cluster_size_distribution(self, observer):
+        #compute the distribution of cluster sizes in the frame
+
+        #check if we are focusing on any particular cluster sizes
+        focus_list = observer.get_focus_list()
+        if focus_list is not None:
+
+            #get cluster sizes and detailed info on sizes in the focus list
+            size_dict, focus_dict = self.__get_cluster_sizes_focused(focus_list)
+
+        else:
+
+            #just get the sizes
+            size_dict = self.__get_cluster_sizes()
+
+        #add the monomers that are not clustered to the dict
+        size_dict[1] = len(self.__monomer_ids)
+
+        #determine the largest group
+        non_zero_counts = len(size_dict.values())
+        if non_zero_counts > 0:
+            largest_group_size = np.max(np.array(list(size_dict.keys())))
+        else:
+            largest_group_size = 0
+
+        if focus_list is not None:
+            return size_dict, largest_group_size, focus_dict
+        else:
+            return size_dict, largest_group_size
+
+
+    def __get_cluster_sizes(self):
+        #returns a dict where keys are sizes and values are number of clusters of that size
+
+        '''init a dictionary to store histogram data
+           number of clusters (value) of each size (key)'''
+        size_dict = defaultdict(int)
+
+        #loop over clusters and increment the corresponding size index
+        for clust in self.__clusters:
+
+            L = clust.get_num_bodies()
+            size_dict[L] += 1
+
+        return size_dict
+
+    def __get_cluster_sizes_focused(self, focus_list):
+        #same as other get_sizes, but also tracks number of each microstate for sizes in list
+
+        '''init a dictionary to store histogram data
+           number of clusters (value) of each size (key)'''
+        size_dict = defaultdict(int)
+
+        #create a dict that stores time-series of number of each microstate
+        # focus_dict = {cluster_size:[] for cluster_size in focus_list}
+        focus_dict = {cluster_size:defaultdict(int) for cluster_size in focus_list}
+
+        #loop over clusters and increment the corresponding size index
+        for clust in self.__clusters:
+
+            L = clust.get_num_bodies()
+            size_dict[L] += 1
+
+            if L in focus_list:
+
+                # focus_dict[L].append(clust.get_bond_types())
+                focus_dict[L][tuple(sorted(clust.get_bond_types().items()))] += 1
+
+        return size_dict, focus_dict
+
+
+
+
+
+
 
     #private utility functions for the update method
 
@@ -584,6 +663,7 @@ def get_data_from_snap(snap, sim, frame_num):
             #extract the involved bodies from the group and create a cluster
             body_list = [bodies[q] for q in group]
             clusters.append(clust.Cluster(body_list, frame_num))
+            # print(clusters[-1].get_bond_types())
 
         #increment the number of free monomers
         else:

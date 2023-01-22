@@ -27,6 +27,7 @@ import sys
 import os
 
 from collections import defaultdict
+from collections import Counter
 
 from . import body as body
 from . import frame as frame
@@ -143,11 +144,25 @@ class Cluster:
 
         return self.__last_updated
 
+    def get_bond_types(self):
+        #return a dict with each bond type present and how many of those bonds there are
+
+        #get all the bond types from each body in the cluster and make a flat list
+        all_bonds = [bod.get_bond_types() for bod in self.__bodies]
+        flat_list = [item for sublist in all_bonds for item in sublist]
+
+        #count how many of each bond there are, divide by 2 to account for double counting
+        bond_type_dict = dict(Counter(flat_list))
+        return {k:int(bond_type_dict[k]/2) for k in bond_type_dict}
+
+        
     def __update_bodies(self, bodies):
 
         #update the bodies in the cluster to have the set id
         for bod in self.__bodies:
             bod.set_cluster_id(self, self.__cluster_index)
+
+        return
 
 
 
