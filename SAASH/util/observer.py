@@ -87,6 +87,12 @@ class Observer:
 
         return self.__observable_set
 
+    def get_non_trivial_observables(self):
+
+        disallowed = ["num_bodies", "monomer_fraction"]
+        nt_observables = [obs for obs in self.__observable_set if obs not in disallowed]
+        return nt_observables
+
     def get_outfile(self):
 
         return self.__outfile
