@@ -1,7 +1,8 @@
 '''
 
 This file contains class implementations for creating and tracking clusters of bodies 
-between simulation frames. 
+between simulation frames, and outputting the results in a way that can interface 
+with construct of a Markov State Model (MSM)
 
 A cluster is simply an indexed collection of at least two bodies. 
 
@@ -16,17 +17,24 @@ a canonical graph labeling, etc. The ClusterInfo takes the observer and reads th
 requested quantities. The ClusterInfo time series then contains a dictionary with these 
 values at every logged frame. 
 
+A State object can then be created that stores a cluster's size, as well as any other 
+properties the Observer has been set to compute about it. 
+
 '''
 
 import gsd.hoomd
 import numpy as np
 import pandas as pd
 
+import hashlib
+import json
+
 import warnings
 import sys
 import os
 
 from collections import defaultdict
+from collections import Counter
 
 from . import body as body
 from . import frame as frame
@@ -42,6 +50,95 @@ sys.path.insert(0, parent_dir)
 from util import neighborgrid as ng
 
 sys.path.pop(0)
+
+class State:
+
+    def __init__(self, size, properties = dict()):
+
+        self.__size = size
+        self.__properties = properties
+
+
+    def get_size(self):
+
+        return self.__size
+        
+    def get_properties(self):
+        
+        return self.__properties
+
+    def get_hash(self):
+            
+        dict_hash = self.__hash_dictionary(self.__properties)
+        return hash(self.__size) ^ dict_hash
+        
+    def __hash__(self):
+        
+        return self.get_hash()
+        
+    def __eq__(self, state2):
+        
+        if self.__size != state2.get_size():
+            return False
+
+        if self.__properties != state2.get_properties():
+            return False
+            
+        return True
+
+    def __str__(self):
+
+        all_properties = set(self.__properties.keys())
+        if len(all_properties) == 0:
+
+            return "State({},None)".format(self.get_size())
+
+        else:
+
+            return "State({},{}) object with properties: ".format(self.get_size(),all_properties)
+
+    #dictionary hashing methods taken from:
+    # https://ardunn.us/posts/immutify_dictionary/
+
+    def __immutify_dictionary(self, d):
+    #return an immutable copy of the provided dict, for use in hashing
+
+        d_new = {}
+
+        for k, v in d.items():
+        
+            # convert to python native immutables
+            if isinstance(v, np.ndarray):
+                d_new[k] = tuple(v.tolist())
+
+            # immutify any lists
+            elif isinstance(v, list):
+                d_new[k] = tuple(v)
+
+            # recursion if nested
+            elif isinstance(v, dict):
+                d_new[k] = self.__immutify_dictionary(v)
+
+            # ensure numpy "primitives" are casted to json-friendly python natives
+            else:
+                # convert numpy types to native
+                if hasattr(v, "dtype"):
+                    d_new[k] = v.item()
+                else:
+                    d_new[k] = v
+        
+        return dict(sorted(d_new.items(), key=lambda item: item[0]))
+
+
+    def __hash_dictionary(self, d):
+        # Make a json string from the sorted dictionary
+        # then hash that string
+
+        d_hashable = self.__immutify_dictionary(d)
+        s_hashable = json.dumps(d_hashable).encode("utf-8")
+        m = hashlib.sha256(s_hashable).hexdigest()
+
+        return hash(m)
 
 
 class Cluster:
@@ -149,17 +246,25 @@ class Cluster:
 
         return self.__last_updated
 
-    def __update_body_ids(self):
+    def get_bond_types(self):
+        #return a dict with each bond type present and how many of those bonds there are
+
+        #get all the bond types from each body in the cluster and make a flat list
+        all_bonds = [bod.get_bond_types() for bod in self.__bodies]
+        flat_list = [item for sublist in all_bonds for item in sublist]
+
+        #count how many of each bond there are, divide by 2 to account for double counting
+        bond_type_dict = dict(Counter(flat_list))
+        return {k:int(bond_type_dict[k]/2) for k in bond_type_dict}
+
+        
+    def __update_bodies(self, bodies):
 
         #update the bodies in this cluster to have the cluster's id
         for bod in self.__bodies:
             bod.set_cluster_id(self, self.__cluster_index)
 
-    def __remove_body_ids(self):
-
-        #remove the cluster index from all bodies, for cases were bodies are lost
-        for bod in self.__bodies:
-            bod.set_cluster_id(self, -1)
+        return
 
 
 
@@ -178,6 +283,7 @@ class ClusterInfo:
 
         #init an observer
         self.__observer = observer
+        self.__observables = observer.get_non_trivial_observables()
 
         #init storage for observed variables
         self.__stored_data = []
@@ -195,66 +301,34 @@ class ClusterInfo:
     def get_transitions(self, t0, lag):
         #return a list of all transitions that occur between t0 and lag
 
-        #init event list
+        #init event list for all transitions between t0 and t0+lag
         events = []
 
-        #start with the obvious transition in stored data
-        start_data = self.__stored_data[t0]
+        #count transitions between large clusters (size > 1)
+        large_out = self.__handle_large(t0, lag, events)
+        if large_out is not None:
 
-        #only do end data if within the lifetime of the cluster
-        if (self.is_dead() and not self.has_parent() and t0+lag+self.__birth_frame == self.__death_frame):
-            pass
+            start_state = large_out[0]
+            end_state   = large_out[1]
+            events = large_out[2]
+
+            #check for monomer addition and subtraction events
+            events = self.__handle_monomer_add(t0, lag, end_state, events)
+            events = self.__handle_monomer_sub(t0, lag, start_state, events)
 
         else:
 
-            if (t0+lag < len(self.__stored_data)):
-                end_data   = self.__stored_data[t0+lag]
+            #on an exact death frame, subtract monomers from start only
+            start_state = self.__construct_state(self.__stored_data[t0])
+            events = self.__handle_monomer_sub(t0, lag, start_state, events)
 
-                #todo - add in a state conversion fn handle, for now just use num_bodies
-                events.append((start_data['num_bodies'], end_data['num_bodies']))
 
-        #perform dictionary comps to determine which events happened in this lag
-        added_mons = {key:value for key,value in self.__from_monomer.items() if (t0 < key-self.__birth_frame <= t0+lag)}
-        lost_mons  = {key:value for key,value in self.__to_monomer.items() if (t0 < key-self.__birth_frame <= t0+lag)}
-
-        #if these compressed dicts are non-empty
-
-        #addition events
-        for key in added_mons.keys():
-
-            #get the number of added monomers
-            num_added = added_mons[key]['num_monomers']
-            for i in range(num_added):
-
-                events.append((1,end_data['num_bodies']))
-
-        #subtraction events
-        for key in lost_mons.keys():
-
-            #get the number of lost monomers
-            num_lost = lost_mons[key]['num_monomers']
-            for i in range(num_lost):
-
-                events.append((start_data['num_bodies'],1))
-
-        #if looking at first frame, add in monomerization events. skip if splitting from a parent
+        #if looking at first frame, add in monomerization events
+        #if splitting from a parent, skip this. these transitions are counted by handle_large
         if t0 == 0 and not self.__has_parent:
 
-            #get the number of added monomers - cant add more than what we end with
-            num_added = self.__from_monomer[self.__birth_frame]['num_monomers']
+            events = self.__handle_time_0(lag, events)
 
-            if (self.is_dead() and t0+lag+self.__birth_frame == self.__death_frame):
-                end_data = self.__stored_data[t0+lag-1]
-            elif len(self.__stored_data) == 1:
-                end_data = self.__stored_data[t0]
-            else:
-                end_data = self.__stored_data[t0+lag-1]
-
-            upper_bound = end_data['num_bodies']
-
-            for i in range(min(num_added,upper_bound)):
-
-                events.append((1,end_data['num_bodies']))
 
         return events
 
@@ -368,6 +442,105 @@ class ClusterInfo:
 
 
         return self.__observer.compute_coordinate(cluster)
+
+    def __construct_state(self, data):
+        #use the dictionary fields in data to construct a State rep of the cluster
+
+        #construct a dict of all fields other than num_bodies and monomer_fraction
+        properties = {k:v for k,v in data.items() if k in self.__observables}
+        clust_size = data['num_bodies']
+
+        #return a State object
+        return State(clust_size, properties)
+
+    def __handle_large(self, t0, lag, events):
+        #append transitions between large clusters
+
+        #start with the obvious transition in stored data
+        start_data  = self.__stored_data[t0]
+        start_state = self.__construct_state(start_data)
+
+        #only do end data if within the lifetime of the cluster
+        if (self.is_dead() and not self.has_parent() and t0+lag+self.__birth_frame == self.__death_frame):
+            return None
+
+        else:
+
+            if (t0+lag < len(self.__stored_data)):
+
+                #construct an end state
+                end_data   = self.__stored_data[t0+lag]
+                end_state  = self.__construct_state(end_data)
+
+                #append a transition event - tuple with start and end states
+                events.append((start_state, end_state))
+
+                return start_state, end_state, events
+
+
+
+    def __handle_monomer_add(self, t0, lag, end_state, events):
+        #append transitions for monomer addition and subtraction
+
+        #perform dictionary comps to determine which events happened in this lag
+        added_mons = {k:v for k,v in self.__from_monomer.items() if (t0 < k-self.__birth_frame <= t0+lag)}
+
+        #if compressed dict is non-empty, append the monomer add events
+        for key in added_mons.keys():
+
+            #get the number of added monomers
+            num_added = added_mons[key]['num_monomers']
+            for i in range(num_added):
+
+                events.append((State(1), end_state))
+
+        return events
+
+    def __handle_monomer_sub(self, t0, lag, start_state, events):
+        #append transitions for monomer addition and subtraction
+
+        #perform dictionary comps to determine which events happened in this lag
+        lost_mons  = {k:v for k,v in self.__to_monomer.items() if (t0 < k-self.__birth_frame <= t0+lag)}
+
+        #if compressed dict is non-empty, append the monomer sub events
+        for key in lost_mons.keys():
+
+            #get the number of lost monomers
+            num_lost = lost_mons[key]['num_monomers']
+            for i in range(num_lost):
+
+                events.append((start_state, State(1)))
+
+        return events
+
+
+    def __handle_time_0(self, lag, events):
+        #handle special cases that pop up when the initial time is the birth frame
+
+        #get the number of added monomers at the birth frame
+        num_added = self.__from_monomer[self.__birth_frame]['num_monomers']
+
+        #if t+lag places you at death frame, use previous frame
+        if (self.is_dead() and lag+self.__birth_frame == self.__death_frame):
+            end_data = self.__stored_data[lag-1]
+
+        #only existed for one frame, use this first frame
+        elif len(self.__stored_data) == 1:
+            end_data = self.__stored_data[0]
+
+        #t+lag is the middle of the cluster's lifespan
+        else:
+            end_data = self.__stored_data[lag-1]
+
+        #if the end frame is smaller than the original number of monomers, cap num_added
+        upper_bound = end_data['num_bodies']
+        for i in range(min(num_added,upper_bound)):
+
+            events.append((State(1), self.__construct_state(end_data)))
+
+        return events
+
+
 
 
 ####################################################################

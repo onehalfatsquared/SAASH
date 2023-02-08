@@ -115,7 +115,7 @@ class Particle:
         
         return False
 
-    def bind(self, particle, bond_dict = None):
+    def bind(self, particle, bond, bond_dict = None):
         #bind the two particles together by augmenting their bodies bond list
 
         #get the host and target particle body
@@ -130,7 +130,7 @@ class Particle:
         if not host_body.is_bonded(target_body):
 
             #bind on the body level
-            host_body.bind(target_body)
+            host_body.bind(target_body, bond)
 
             #add indices to bond dict
             if (bond_dict is not None):
@@ -140,7 +140,7 @@ class Particle:
         if not target_body.is_bonded(host_body):
 
             #bind on the body level
-            target_body.bind(host_body)
+            target_body.bind(host_body, bond)
 
             #add indices to bond dict
             if (bond_dict is not None):
@@ -179,7 +179,8 @@ class Body:
         self.__cluster_index = -1
 
         #init a list to store bonds - bodies in this list are bound
-        self.__bond_list = []
+        self.__bonded_list = []
+        self.__bond_types  = []
 
         #init a size, type, and position for the body
         self.__position  = particle_pos[0] * 0
@@ -214,7 +215,7 @@ class Body:
     def is_bonded(self, body):
         #determine if the host body is already bonded to the given one
 
-        if body in self.__bond_list:
+        if body in self.__bonded_list:
             return True
 
         return False
@@ -231,10 +232,11 @@ class Body:
         
         return False
 
-    def bind(self, body):
+    def bind(self, body, bond):
         #append the body to the hosts bond list
 
-        self.__bond_list.append(body)
+        self.__bonded_list.append(body)
+        self.__bond_types.append(bond.get_name())
 
     #setter functions
 
@@ -290,7 +292,11 @@ class Body:
 
     def get_bond_list(self):
 
-        return self.__bond_list
+        return self.__bonded_list
+
+    def get_bond_types(self):
+
+        return self.__bond_types
 
 ####################################################################
 ################# Utility and Data Extraction ######################
@@ -390,7 +396,7 @@ def get_nanoparticles(snap, sim):
 ####################################################################
 
 
-def check_particle_pairs(particles1, particles2, cutoff, sim, bond_dict):
+def check_particle_pairs(particles1, particles2, cutoff, sim, bond, bond_dict):
     #check if any of the particle1's are within cutoff of particle2's
 
     #do pairwise comparisons between each particle
@@ -399,7 +405,7 @@ def check_particle_pairs(particles1, particles2, cutoff, sim, bond_dict):
 
             #check if particles are within cutoff. If so, create a bond between bodies
             if (particle1.is_bonded(particle2, cutoff*sim.cutoff_mult, sim.box_dim)):
-                particle1.bind(particle2, bond_dict)
+                particle1.bind(particle2, bond, bond_dict)
                 # print("binding {} with {}".format(particle1.get_type(), particle2.get_type()))
                 # print(particle1.get_position(), particle2.get_position())
                 return True
@@ -429,7 +435,7 @@ def check_body_pair(body1, body2, sim, bond_dict):
         particles2 = body2.get_particles_by_type(type2)
 
         #do pairwise comparisons between each particle
-        found_bond = check_particle_pairs(particles1, particles2, cutoff, sim, bond_dict)
+        found_bond = check_particle_pairs(particles1, particles2, cutoff, sim, bond, bond_dict)
         if (found_bond):
             return
 
@@ -442,7 +448,7 @@ def check_body_pair(body1, body2, sim, bond_dict):
         particles2 = body2.get_particles_by_type(type1)
 
         #do pairwise comparisons between each particle
-        found_bond = check_particle_pairs(particles1, particles2, cutoff, sim, bond_dict)
+        found_bond = check_particle_pairs(particles1, particles2, cutoff, sim, bond, bond_dict)
         if (found_bond):
             return
 

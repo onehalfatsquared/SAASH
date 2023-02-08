@@ -8,6 +8,9 @@ information the user is looking to compute during the analysis. Options include.
 This mode identifies the number of clusters of each size, as well as the largest 
 cluster, in every frame. Output as a .cl file
 
+Optionally, can supply a 'focus list' which will further identify the number of each
+microstate of that size (fixed to be number of each type of bond for now)
+
 2) nanoparticle
 
 This mode only considers assembly in the vicinity of nanoparticles. Will output
@@ -47,7 +50,6 @@ class Observer:
         self.__final_frame = None
         self.__jump        = jump
 
-
         #init variable to store the runtype
         self.__run_type = None
         if run_type:
@@ -60,6 +62,9 @@ class Observer:
             self.__set_outfile_name(gsd_file)
 
 
+        #init a focus list. during a bulk run 
+        self.__focus_list = None
+
 
 
 
@@ -69,12 +74,24 @@ class Observer:
         print("Observable {} added to observer".format(observable))
         return
 
+    def set_focus_list(self, focus_list):
 
+        self.__focus_list = focus_list
+        return
 
+    def get_focus_list(self):
+
+        return self.__focus_list
 
     def get_observables(self):
 
         return self.__observable_set
+
+    def get_non_trivial_observables(self):
+
+        disallowed = ["num_bodies", "monomer_fraction"]
+        nt_observables = [obs for obs in self.__observable_set if obs not in disallowed]
+        return nt_observables
 
     def get_outfile(self):
 
@@ -187,6 +204,10 @@ class Observer:
             elif obs == "positions":
 
                 property_dict['positions'] = cluster.get_body_positions()
+
+            elif obs == "bonds":
+
+                property_dict['bonds'] = cluster.get_bond_types()
 
             else:
 

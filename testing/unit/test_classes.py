@@ -81,7 +81,7 @@ def testBodyBind():
 
 
     if not test_particle1.get_body().is_bonded(test_particle2.get_body()):
-        test_particle1.bind(test_particle2)
+        test_particle1.bind(test_particle2, body.Bond('A','B',1))
 
     #check if body 1 is binded to body 2 and vise versa
     bf = body1.is_bonded(body2)
@@ -95,7 +95,7 @@ def testBodyBind():
 
     #try to do the same in reverse to see if it gets stopped
     if not test_particle2b.get_body().is_bonded(test_particle1.get_body()):
-        test_particle2b.bind(test_particle1)
+        test_particle2b.bind(test_particle1, body.Bond('A','B',1))
 
     #check that the bond list only has a single entry
     bond_list = body2.get_bond_list()
