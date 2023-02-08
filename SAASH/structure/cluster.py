@@ -183,7 +183,7 @@ class Cluster:
 
     def update(self, cluster):
         #update a cluster with up to date member bodies
-        #NOTE: THIS FUNCTION SHOULD PROBABLY NOT BE USED IN THIS FRAMEWORK
+        #NOTE: THIS FUNCTION SHOULD PROBABLY NOT BE USED WHEN MAKING FRAMES
 
         #remove all old ids from previous bodies
         self.__remove_body_ids()
@@ -257,14 +257,15 @@ class Cluster:
         bond_type_dict = dict(Counter(flat_list))
         return {k:int(bond_type_dict[k]/2) for k in bond_type_dict}
 
-        
-    def __update_bodies(self, bodies):
+    def __update_body_ids(self):
 
         #update the bodies in this cluster to have the cluster's id
         for bod in self.__bodies:
             bod.set_cluster_id(self, self.__cluster_index)
 
         return
+
+
 
 
 
