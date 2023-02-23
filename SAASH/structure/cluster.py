@@ -26,9 +26,6 @@ import gsd.hoomd
 import numpy as np
 import pandas as pd
 
-import hashlib
-import json
-
 import warnings
 import sys
 import os
@@ -48,98 +45,9 @@ parent_dir = current_dir[:current_dir.rfind(os.path.sep)]
 sys.path.insert(0, parent_dir)
 
 from util import neighborgrid as ng
+from util.state import State
 
 sys.path.pop(0)
-
-class State:
-
-    def __init__(self, size, properties = dict()):
-
-        self.__size = size
-        self.__properties = properties
-
-
-    def get_size(self):
-
-        return self.__size
-        
-    def get_properties(self):
-        
-        return self.__properties
-
-    def get_hash(self):
-            
-        dict_hash = self.__hash_dictionary(self.__properties)
-        return hash(self.__size) ^ dict_hash
-        
-    def __hash__(self):
-        
-        return self.get_hash()
-        
-    def __eq__(self, state2):
-        
-        if self.__size != state2.get_size():
-            return False
-
-        if self.__properties != state2.get_properties():
-            return False
-            
-        return True
-
-    def __str__(self):
-
-        all_properties = set(self.__properties.keys())
-        if len(all_properties) == 0:
-
-            return "State({},None)".format(self.get_size())
-
-        else:
-
-            return "State({},{}) object with properties: ".format(self.get_size(),all_properties)
-
-    #dictionary hashing methods taken from:
-    # https://ardunn.us/posts/immutify_dictionary/
-
-    def __immutify_dictionary(self, d):
-    #return an immutable copy of the provided dict, for use in hashing
-
-        d_new = {}
-
-        for k, v in d.items():
-        
-            # convert to python native immutables
-            if isinstance(v, np.ndarray):
-                d_new[k] = tuple(v.tolist())
-
-            # immutify any lists
-            elif isinstance(v, list):
-                d_new[k] = tuple(v)
-
-            # recursion if nested
-            elif isinstance(v, dict):
-                d_new[k] = self.__immutify_dictionary(v)
-
-            # ensure numpy "primitives" are casted to json-friendly python natives
-            else:
-                # convert numpy types to native
-                if hasattr(v, "dtype"):
-                    d_new[k] = v.item()
-                else:
-                    d_new[k] = v
-        
-        return dict(sorted(d_new.items(), key=lambda item: item[0]))
-
-
-    def __hash_dictionary(self, d):
-        # Make a json string from the sorted dictionary
-        # then hash that string
-
-        d_hashable = self.__immutify_dictionary(d)
-        s_hashable = json.dumps(d_hashable).encode("utf-8")
-        m = hashlib.sha256(s_hashable).hexdigest()
-
-        return hash(m)
-
 
 class Cluster:
 
@@ -407,6 +315,10 @@ class ClusterInfo:
 
         return self.__stored_data
 
+    def get_observables(self):
+
+        return self.__observables
+
     def get_monomer_gain_data(self):
 
         return self.__from_monomer
@@ -419,6 +331,10 @@ class ClusterInfo:
 
         return self.__lifetime
 
+    def get_birth_frame(self):
+
+        return self.__birth_frame
+
     def is_dead(self):
 
         return self.__is_dead
@@ -430,6 +346,16 @@ class ClusterInfo:
     def has_parent(self):
 
         return self.__has_parent
+
+    def construct_state(self, data):
+        #use the dictionary fields in data to construct a State rep of the cluster
+
+        #construct a dict of all fields other than num_bodies and monomer_fraction
+        properties = {k:v for k,v in data.items() if k in self.__observables}
+        clust_size = data['num_bodies']
+
+        #return a State object
+        return State(clust_size, properties)
 
 
     def __set_lifetime(self):
@@ -444,15 +370,6 @@ class ClusterInfo:
 
         return self.__observer.compute_coordinate(cluster)
 
-    def __construct_state(self, data):
-        #use the dictionary fields in data to construct a State rep of the cluster
-
-        #construct a dict of all fields other than num_bodies and monomer_fraction
-        properties = {k:v for k,v in data.items() if k in self.__observables}
-        clust_size = data['num_bodies']
-
-        #return a State object
-        return State(clust_size, properties)
 
     def __handle_large(self, t0, lag, events):
         #append transitions between large clusters

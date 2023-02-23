@@ -89,7 +89,7 @@ class Observer:
 
     def get_non_trivial_observables(self):
 
-        disallowed = ["num_bodies", "monomer_fraction"]
+        disallowed = ["num_bodies", "monomer_fraction", 'positions', 'orientations', 'indices']
         nt_observables = [obs for obs in self.__observable_set if obs not in disallowed]
         return nt_observables
 
@@ -208,6 +208,10 @@ class Observer:
             elif obs == "bonds":
 
                 property_dict['bonds'] = cluster.get_bond_types()
+
+            elif obs == "indices":
+
+                property_dict['indices'] = cluster.get_body_ids()
 
             else:
 
