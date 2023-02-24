@@ -1,18 +1,26 @@
 '''
 
-This file contains implementations of a State class, which stores some discretized set of 
+This file contains an implementation of a State class, which stores some discretized set of 
 information to represent a molecular configuration. 
 
-Also includes classes to store a collection of unique states that have been visited 
-in each simulation. These can be combined to form a global database of all states 
-visited among all parameter sets and conditions, for use in MSM construction. 
+There are cases in which one would like to go from the discretized State description, back 
+to a full description of the state (visualization or initialization for targetted sampling).
 
-Also contains references to the location in which the full state information can be 
-found, for use in visualization or targetted sampling. 
+The StateScraper class will go through a cluster-processed trajectory file and find all 
+unique states from that simulation. It creates a StateRef, the minimal info required to 
+find out the full state information (gsd file, frame number, and body indices), for each
+state and collects it in a StateRefCollection object.
+
+The StateRefCollection can then be used to build a StateRepCollection, a mapping from a 
+State object to a StateRep. This contains all the information needed to initialize the 
+full molecular configuration (body positions, body type ids, and body orientations). 
+
 '''
 
 import sys, os
 import pickle
+
+import gsd.hoomd
 
 import numpy as np
 
@@ -24,13 +32,13 @@ class StateScraper:
     '''
     StateScraper is responsible for constructing the collection of all observed states
     from a trajectory file. Acts as an interface between an analysis script and 
-    the StateCollection class.
+    the StateRefCollection class.
     '''
 
     def __init__(self, folder):
 
         self.__folder = folder
-        self.__collection = StateCollection()
+        self.__collection = StateRefCollection()
 
         self.__pkl_file = ""
         self.__complete = False
@@ -90,11 +98,11 @@ class StateScraper:
                 if self.__collection.is_new(state):
 
                     #create a StateRep and add it to the collection
-                    file      = self.__pkl_file
+                    file      = self.__pkl_file.split(".pkl")[0] + ".gsd"
                     frame_num = traj.get_birth_frame() + j
                     indices   = data['indices']
                     state_rep = StateRef(file, frame_num, indices)
-                    self.__collection.add_state(state_rep)
+                    self.__collection.add_state(state, state_rep)
 
         return
 
@@ -112,10 +120,10 @@ class StateScraper:
         return
 
 
-class StateCollection:
+class StateRefCollection:
 
     '''
-    StateCollection simply stores a dictionary where the keys are State objects
+    StateRefCollection simply stores a dictionary where the keys are State objects
     and the values are the associated StateRef structs. 
 
     Keeps track of unique states found in a particular trajectory. Allows searching
@@ -133,7 +141,7 @@ class StateCollection:
         self.__was_loaded = False
 
         if load_folder is not None:
-            load(load_folder)
+            self.load(load_folder)
             self.__was_loaded = True
 
         return
@@ -142,9 +150,9 @@ class StateCollection:
         #save self to the specified location
 
         #check if the collection was loaded, and save/load paths are same
-        if (self.__was_loaded and self.__load_path == save_file):
+        if (self.__was_loaded and self.__load_path == save_loc):
 
-            err_msg = "This save would overwrite the original file at {}".format(self.__was_loaded)
+            err_msg = "This save would overwrite the original file at {}".format(self.__load_path)
             raise RuntimeError(err_msg)
 
         #pickle self to the outfile location
@@ -154,7 +162,7 @@ class StateCollection:
         return
 
     def load(self, load_folder):
-        #load the StateCollection object from the specified folder
+        #load the StateRefCollection object from the specified folder
 
         #search the folder for .sref extensions
         file_found = False
@@ -206,6 +214,10 @@ class StateCollection:
 
         return self.__state_refs
 
+    def get_load_path(self):
+
+        return self.__load_path
+
 
     def __add__(self, other_collection):
         #add in all states present in other_collection not in self
@@ -251,6 +263,214 @@ class StateRef:
     def get_indices(self):
 
         return self.__indices
+
+
+class StateRepCollection:
+
+    '''
+    StateRepCollection stores a dictionary where the keys are State objects
+    and the values are the associated StateRep structs. 
+
+    Is initialized with a StateRefCollection, containing references to the location
+    of all the unique states encountered in a simulation. The class then follows these
+    references to grab the required information to construct a StateRep.
+
+    Can also be init by providing a folder to load a pickled .srep file
+
+    NOTE: This class has some overlap with StateRefCollection, but a lot of distinct 
+    parts too. Good place to inherit from some more abstract class?
+    '''
+
+    def __init__(self, initMethod):
+
+        #check which init method is requested - StateRefCollection or string with path
+        if isinstance(initMethod, StateRefCollection):
+
+            method = "construct"
+            refCollection = initMethod
+
+        elif isinstance(initMethod, str):
+
+            method = "load"
+            load_folder = initMethod
+
+        else:
+
+            err_msg = "To init StateRepCollection, please provide either a StateRefCollection\
+                       or path to a folder containing a .srep file to load from."
+            raise TypeError(err_msg)
+
+
+        #init the class variables
+        self.__state_reps = dict()
+
+        self.__save_path  = ""
+        self.__load_path  = ""
+        self.__was_loaded = False
+
+        #branch based on init method
+        if method == "construct":
+
+            self.__construct_rep_collection(refCollection)
+            self.__set_save_path(refCollection)
+            self.__save()
+
+        elif method == "load":
+
+            self.__load(load_folder)
+            self.__was_loaded = True
+
+        return
+
+    def get_dict(self):
+
+        return self.__state_reps
+
+    def get_rep(self, state):
+
+        if state in self.__state_reps:
+            return self.__state_reps[state]
+
+        msg = "{} not found in collection.".format(state)
+        raise KeyError(msg)
+
+        return
+
+    def __save(self):
+        '''
+        Save self to the internal save path. User has no access to this function b/c
+        this class is intended to be constructed once and not editied after.
+        The save location is the same path as the refCollection the class is init with,
+        but with .srep file extension
+        '''
+
+        #pickle self to the outfile location
+        with open(self.__save_path,'wb') as outfile:
+            pickle.dump(self, outfile)
+
+        return
+
+    def __load(self, load_folder):
+        #load the StateRefCollection object from the specified folder
+
+        #search the folder for .srep extensions
+        file_found = False
+        for file in os.listdir(load_folder):
+            if file.endswith(".srep"):
+                self.__load_path = os.path.join(load_folder, file)
+                file_found = True
+                break
+
+        if not file_found:
+
+            #return an error message that a 'sref' file was not found
+            msg = "No .srep file was found in {}".format(self.__folder)
+            raise FileNotFoundError(msg)
+
+        #unpickle the file and set the dicts equal
+        with open(self.__load_path, 'rb') as f:
+            saved_collection = pickle.load(f)
+
+        self.__state_reps = saved_collection.get_dict().copy()
+
+        return
+
+
+    def __construct_rep_collection(self, refCollection):
+
+        #get the dict of refs from the collection
+        refDict = refCollection.get_dict()
+
+        #loop over all states (keys), create a StateRep using the Ref to find the data
+        for state in refDict.keys():
+
+            stateRef = refDict[state]
+            stateRep = self.__create_rep(stateRef)
+            self.__state_reps[state] = stateRep
+
+        return
+
+
+
+    def __create_rep(self, stateRef):
+        #use the data in stateRef to get the necessary info to create a stateRep
+
+        #get the identifying data
+        file    = stateRef.get_file()
+        frame   = stateRef.get_frame()
+        indices = stateRef.get_indices()
+
+        #open the file and frame referenced
+        snaps = gsd.hoomd.open(name=file, mode="rb")
+        snap  = snaps.read_frame(frame)
+
+        #filter the bodies according to index and grab the required data
+        positions    = snap.particles.position[indices]
+        types        = snap.particles.typeid[indices]
+        typeids      = [snap.particles.types[t] for t in types]
+        orientations = snap.particles.orientation[indices]
+
+        #close file
+        snaps.close()
+
+        #create and return a StateRep object 
+        return StateRep(len(types), positions, typeids, orientations)
+
+    def __set_save_path(self, refCollection):
+        #save to the same folder as refCollection was in
+
+        ref_path = refCollection.get_load_path()
+        self.__save_path = ref_path.split(".sref")[0] + ".srep"
+
+        return
+
+
+    def __add__(self, other_collection):
+        #add in all states present in other_collection not in self
+
+        for key,value in other_collection.get_dict().items():
+
+            if key not in self.__state_reps:
+                self.__state_reps[key] = value
+
+        return
+
+
+class StateRep:
+
+    '''
+    StateRep ontains the minimum set of information required to represent a 
+    full configuration of a particular state. These are:
+        1) The number of bodies making up the state
+        2) The positions of each body
+        3) The type of each body
+        4) The orientation of each body
+        5) Others???
+    '''
+
+    def __init__(self, size, positions, types, orientations):  
+
+        self.__size         = size
+        self.__positions    = positions
+        self.__types        = types
+        self.__orientations = orientations
+
+
+    def get_size(self):
+
+        return self.__size
+
+    def get_positions(self):
+
+        return self.__positions
+
+    def get_types(self):
+
+        return self.__types
+
+    def get_orientations(self):
+
+        return self.__orientations
 
 
 class State:
