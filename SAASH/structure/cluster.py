@@ -228,7 +228,7 @@ class ClusterInfo:
         else:
 
             #on an exact death frame, subtract monomers from start only
-            start_state = self.__construct_state(self.__stored_data[t0])
+            start_state = self.construct_state(self.__stored_data[t0])
             events = self.__handle_monomer_sub(t0, lag, start_state, events)
 
 
@@ -376,7 +376,7 @@ class ClusterInfo:
 
         #start with the obvious transition in stored data
         start_data  = self.__stored_data[t0]
-        start_state = self.__construct_state(start_data)
+        start_state = self.construct_state(start_data)
 
         #only do end data if within the lifetime of the cluster
         if (self.is_dead() and not self.has_parent() and t0+lag+self.__birth_frame == self.__death_frame):
@@ -388,7 +388,7 @@ class ClusterInfo:
 
                 #construct an end state
                 end_data   = self.__stored_data[t0+lag]
-                end_state  = self.__construct_state(end_data)
+                end_state  = self.construct_state(end_data)
 
                 #append a transition event - tuple with start and end states
                 events.append((start_state, end_state))
@@ -454,7 +454,7 @@ class ClusterInfo:
         upper_bound = end_data['num_bodies']
         for i in range(min(num_added,upper_bound)):
 
-            events.append((State(1), self.__construct_state(end_data)))
+            events.append((State(1), self.construct_state(end_data)))
 
         return events
 
