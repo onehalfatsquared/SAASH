@@ -41,11 +41,13 @@ class StateScraper:
         self.__collection = StateRefCollection()
 
         self.__pkl_file = ""
-        self.__complete = False
+
+        self.__run_collection()
+        self.__save()
 
         return
 
-    def run_collection(self):
+    def __run_collection(self):
         #collect all states from the trajectory data
 
         #unpickle the data
@@ -58,11 +60,10 @@ class StateScraper:
 
         #extract states from the cluster transition data
         self.__get_states_from_data(cluster_info)
-        self.__complete = True
 
         return
 
-    def save(self):
+    def __save(self):
         #pickle the collection for later access
 
         #check if the collection has been performed
@@ -212,7 +213,7 @@ class StateRefCollection:
 
     def get_dict(self):
 
-        return self.__state_refs
+        return self.__state_refs.copy()
 
     def get_load_path(self):
 
@@ -324,7 +325,7 @@ class StateRepCollection:
 
     def get_dict(self):
 
-        return self.__state_reps
+        return self.__state_reps.copy()
 
     def get_rep(self, state):
 
