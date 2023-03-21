@@ -35,12 +35,13 @@ class StateScraper:
     the StateRefCollection class.
     '''
 
-    def __init__(self, folder):
+    def __init__(self, folder, verbose = False):
 
         self.__folder = folder
         self.__collection = StateRefCollection()
 
-        self.__pkl_file = ""
+        self.__cl_file  = ""
+        self.__verbosity = verbose
 
         self.__run_collection()
         self.__save()
@@ -50,15 +51,16 @@ class StateScraper:
     def __run_collection(self):
         #collect all states from the trajectory data
 
-        #unpickle the data
-        self.__pkl_file = self.__get_path_to_pickle()
-        with open(self.__pkl_file, 'rb') as f:
+        #unpickle the cluster data
+        self.__cl_file = self.__get_path_to_cluster_data()
+        with open(self.__cl_file, 'rb') as f:
             sim_results = pickle.load(f)
 
         #extract the info from the pickle
         cluster_info = sim_results.cluster_info
 
         #extract states from the cluster transition data
+        print("Extracting states from {}".format(self.__cl_file))
         self.__get_states_from_data(cluster_info)
 
         return
@@ -66,13 +68,8 @@ class StateScraper:
     def __save(self):
         #pickle the collection for later access
 
-        #check if the collection has been performed
-        if not self.__complete:
-            print("Warning: Run the data collection before saving")
-            return
-
         #collection is complete. set path to save results and call save
-        out_file_path = self.__pkl_file.split(".pkl")[0]
+        out_file_path = self.__cl_file.split(".cl")[0]
         out_file_path += ".sref"
         self.__collection.save(out_file_path)
 
@@ -99,23 +96,29 @@ class StateScraper:
                 if self.__collection.is_new(state):
 
                     #create a StateRep and add it to the collection
-                    file      = self.__pkl_file.split(".pkl")[0] + ".gsd"
+                    file      = self.__cl_file.split(".cl")[0] + ".gsd"
                     frame_num = traj.get_birth_frame() + j
                     indices   = data['indices']
                     state_rep = StateRef(file, frame_num, indices)
                     self.__collection.add_state(state, state_rep)
 
+                    if (self.__verbosity):
+                        ns = self.__collection.get_num_states()
+                        print("{}, Discovered {}".format(ns, state))
+
+        print("Found {} states".format(self.__collection.get_num_states()))
+
         return
 
-    def __get_path_to_pickle(self):
+    def __get_path_to_cluster_data(self):
 
         #find the pickled transition file
         for file in os.listdir(self.__folder):
-            if file.endswith(".pkl"):
+            if file.endswith(".cl"):
                 return os.path.join(self.__folder, file)
 
-        #return an error message that a 'pkl' file was not found'
-        msg = "No .pkl trajectory file was found in {}".format(self.__folder)
+        #return an error message that a 'cl' file was not found'
+        msg = "No .cl trajectory file was found in {}".format(self.__folder)
         raise FileNotFoundError(msg)
 
         return
@@ -214,6 +217,10 @@ class StateRefCollection:
     def get_dict(self):
 
         return self.__state_refs.copy()
+
+    def get_num_states(self):
+
+        return len(self.__state_refs)
 
     def get_load_path(self):
 
@@ -326,6 +333,10 @@ class StateRepCollection:
     def get_dict(self):
 
         return self.__state_reps.copy()
+
+    def get_num_states(self):
+
+        return len(self.__state_reps)
 
     def get_rep(self, state):
 

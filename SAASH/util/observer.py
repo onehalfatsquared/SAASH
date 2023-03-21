@@ -6,7 +6,7 @@ information the user is looking to compute during the analysis. Options include.
 1) bulk
 
 This mode identifies the number of clusters of each size, as well as the largest 
-cluster, in every frame. Output as a .cl file
+cluster, in every frame. Output as a .sizes file
 
 Optionally, can supply a 'focus list' which will further identify the number of each
 microstate of that size (fixed to be number of each type of bond for now)
@@ -20,7 +20,7 @@ cluster properties that are set in the observer for each nanoparticle in a .np f
 
 This mode will treat each cluster (2 or more bonded particles) seperately. Will track 
 all properties specified in the observer across each cluster's lifetime. Automatically
-includes the monomer fraction in this list of data. Will be pickled as a .pkl file. 
+includes the monomer fraction in this list of data. Will be pickled as a .cl file. 
 
 
 '''
@@ -40,7 +40,7 @@ class Observer:
 
         #set the allowed run type options and corresponding outfile extensions
         self.__allowed_run_types = ['bulk', 'nanoparticle', 'cluster']
-        self.__file_extensions   = {'bulk':'.cl', 'nanoparticle':'.np', 'cluster':'.pkl'}
+        self.__file_extensions   = {'bulk':'.sizes', 'nanoparticle':'.np', 'cluster':'.cl'}
 
         #init a set of observables to compute
         self.__observable_set = set()

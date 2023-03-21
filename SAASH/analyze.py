@@ -317,7 +317,7 @@ def write_bulk_output(out_data, frames, observer, jump = 1):
 
         for csize in focus_list:
 
-            focus_outfile = outfile.split('.')[0]+str(csize)+".cl"
+            focus_outfile = outfile.split('.')[0]+str(csize)+".fsizes"
             write_focus_output(csize, out_data[2], focus_outfile, observer)
 
 
