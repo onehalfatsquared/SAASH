@@ -153,7 +153,9 @@ class Frame:
                                                    current_monomer, observer)
 
                             #add to update list with a blank cluster object (for mon info update)
-                            self.__updates[clust.Cluster([],frame_num-1)] = cluster
+                            empty_cluster = clust.Cluster([], frame_num-1)
+                            empty_cluster.set_cluster_id(cluster.get_cluster_id())
+                            self.__updates[empty_cluster] = cluster
 
 
                     #otherwise, just assign the match 
@@ -554,7 +556,8 @@ class Frame:
 
             #determine how many monomers were gained and lost from these id sets
             m_gain, m_lost = get_monomer_stats(past_ids, new_ids, old_bodies, bodies)
-            # #print("Monomer gain {}, Monomer loss {}".format(m_gain, m_lost))
+            # print(key.get_cluster_id())
+            # print("Monomer gain {}, Monomer loss {}".format(m_gain, m_lost))
 
             #update the monomer stats
             if m_gain > 0:
@@ -567,6 +570,9 @@ class Frame:
                 cluster_id = key.get_cluster_id()
                 cluster_info[cluster_id].remove_monomers(key, frame_num, m_lost, prev_monomer)
 
+            # print(key.get_cluster_id(), cluster_info[key.get_cluster_id()].get_data())
+            # print(key.get_cluster_id(), cluster_info[key.get_cluster_id()].get_monomer_gain_data())
+        
         #loop over the now matched clusters and update the cluster_info
         #(can loop over all keys in the label_dict to avoid unnec work)
         for key in list(self.__label_dict.keys()):

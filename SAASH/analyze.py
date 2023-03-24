@@ -215,7 +215,7 @@ def handle_cluster(snaps, frames, sim, observer, jump = 1):
         snap = snaps.read_frame(frame_num)
 
         #do the update for the current frame
-        cluster_info, old_frame = cluster.track_clustering(snap, sim, frame_num, 
+        cluster_info, old_frame = cluster.track_clustering(snap, sim, int(frame_num/jump), 
                                                            cluster_info, old_frame,
                                                            observer)
 
