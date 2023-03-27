@@ -137,15 +137,15 @@ class StateRefCollection:
     Can be loaded from a pickled class object.
     ''' 
 
-    def __init__(self, load_folder = None):
+    def __init__(self, load_location = None):
 
         self.__state_refs = dict()
 
         self.__load_path  = ""
         self.__was_loaded = False
 
-        if load_folder is not None:
-            self.load(load_folder)
+        if load_location is not None:
+            self.load(load_location)
             self.__was_loaded = True
 
         return
@@ -159,28 +159,56 @@ class StateRefCollection:
             err_msg = "This save would overwrite the original file at {}".format(self.__load_path)
             raise RuntimeError(err_msg)
 
+        #check if save_loc is a directory, if so, give default name
+        if os.path.isdir(save_loc):
+            if not save_loc.endswith('/'):
+                save_loc += "/"
+            save_loc += 'state_database.sref'
+
+        #if the save_loc doesnt end in sref, append the extension
+        if not save_loc.endswith('.sref'):
+            save_loc += '.sref'
+
         #pickle self to the outfile location
         with open(save_loc,'wb') as outfile:
             pickle.dump(self, outfile)
 
         return
 
-    def load(self, load_folder):
-        #load the StateRefCollection object from the specified folder
+    def load(self, load_location):
+        #load the StateRefCollection object from the specified folder/file
 
-        #search the folder for .sref extensions
         file_found = False
-        for file in os.listdir(load_folder):
-            if file.endswith(".sref"):
-                self.__load_path = os.path.join(load_folder, file)
-                file_found = True
-                break
+
+        #determine if a folder or a 'sref' file was provided
+        if load_location.endswith(".sref"):
+
+            self.__load_path = load_location
+            file_found = True
+
+        elif os.path.isdir(load_location):
+
+            #search the folder for .sref extensions
+            for file in os.listdir(load_location):
+                if file.endswith(".sref"):
+
+                    #check if there are several potential files and give error
+                    if (file_found):
+                        msg = "Multiple .sref files found in {}. Specify a single file".format(self.__folder)
+                        raise RuntimeError(msg)
+
+                    #set path to file loc and flag that a file was found
+                    self.__load_path = os.path.join(load_location, file)
+                    file_found = True
+
+        else:
+
+            self.__fnf_error(load_location)
+       
 
         if not file_found:
 
-            #return an error message that a 'sref' file was not found
-            msg = "No .sref file was found in {}".format(self.__folder)
-            raise FileNotFoundError(msg)
+            self.__fnf_error(load_location)
 
         #unpickle the file and set the dicts equal
         with open(self.__load_path, 'rb') as f:
@@ -237,6 +265,14 @@ class StateRefCollection:
 
         return
 
+    def __fnf_error(location):
+        #raise a file not found error at the current location
+
+        msg = "Provided load location ({}) could not be found. ".format(location)
+        msg+= "Please provide a .sref file, or folder containing exactly one .sref file"
+        raise FileNotFoundError(msg)
+        return
+
 
 class StateRef:
 
@@ -283,13 +319,12 @@ class StateRepCollection:
     of all the unique states encountered in a simulation. The class then follows these
     references to grab the required information to construct a StateRep.
 
-    Can also be init by providing a folder to load a pickled .srep file
+    Can also be init by providing a folder containing a single .srep file, or a 
+    path to a .srep file. 
 
-    NOTE: This class has some overlap with StateRefCollection, but a lot of distinct 
-    parts too. Good place to inherit from some more abstract class?
     '''
 
-    def __init__(self, initMethod):
+    def __init__(self, initMethod = None):
 
         #check which init method is requested - StateRefCollection or string with path
         if isinstance(initMethod, StateRefCollection):
@@ -301,6 +336,10 @@ class StateRepCollection:
 
             method = "load"
             load_folder = initMethod
+
+        elif initMethod is None:
+
+            method = "none"
 
         else:
 
@@ -321,11 +360,11 @@ class StateRepCollection:
 
             self.__construct_rep_collection(refCollection)
             self.__set_save_path(refCollection)
-            self.__save()
+            self.save(self.__save_path)
 
         elif method == "load":
 
-            self.__load(load_folder)
+            self.load(load_folder)
             self.__was_loaded = True
 
         return
@@ -348,7 +387,7 @@ class StateRepCollection:
 
         return
 
-    def __save(self):
+    def save(self, save_loc):
         '''
         Save self to the internal save path. User has no access to this function b/c
         this class is intended to be constructed once and not editied after.
@@ -356,28 +395,62 @@ class StateRepCollection:
         but with .srep file extension
         '''
 
+        #check if the collection was loaded, and save/load paths are same
+        if (self.__was_loaded and self.__load_path == save_loc):
+
+            err_msg = "This save would overwrite the original file at {}".format(self.__load_path)
+            raise RuntimeError(err_msg)
+
+        #check if save_loc is a directory, if so, give default name
+        if os.path.isdir(save_loc):
+            if not save_loc.endswith('/'):
+                save_loc += "/"
+            save_loc += 'state_database.srep'
+
+        #if the save_loc doesnt end in sref, append the extension
+        if not save_loc.endswith('.srep'):
+            save_loc += '.srep'
+
         #pickle self to the outfile location
-        with open(self.__save_path,'wb') as outfile:
+        with open(save_loc,'wb') as outfile:
             pickle.dump(self, outfile)
 
         return
 
-    def __load(self, load_folder):
+    def load(self, load_folder):
         #load the StateRefCollection object from the specified folder
 
-        #search the folder for .srep extensions
         file_found = False
-        for file in os.listdir(load_folder):
-            if file.endswith(".srep"):
-                self.__load_path = os.path.join(load_folder, file)
-                file_found = True
-                break
+
+        #determine if a folder or a 'sref' file was provided
+        if load_location.endswith(".srep"):
+
+            self.__load_path = load_location
+            file_found = True
+
+        elif os.path.isdir(load_location):
+
+            #search the folder for .sref extensions
+            for file in os.listdir(load_location):
+                if file.endswith(".srep"):
+
+                    #check if there are several potential files and give error
+                    if (file_found):
+                        msg = "Multiple .srep files found in {}. Specify a single file".format(self.__folder)
+                        raise RuntimeError(msg)
+
+                    #set path to file loc and flag that a file was found
+                    self.__load_path = os.path.join(load_location, file)
+                    file_found = True
+
+        else:
+
+            self.__fnf_error(load_location)
+       
 
         if not file_found:
 
-            #return an error message that a 'sref' file was not found
-            msg = "No .srep file was found in {}".format(self.__folder)
-            raise FileNotFoundError(msg)
+            self.__fnf_error(load_location)
 
         #unpickle the file and set the dicts equal
         with open(self.__load_path, 'rb') as f:
@@ -445,6 +518,14 @@ class StateRepCollection:
             if key not in self.__state_reps:
                 self.__state_reps[key] = value
 
+        return
+
+    def __fnf_error(location):
+        #raise a file not found error at the current location
+
+        msg = "Provided load location ({}) could not be found. ".format(location)
+        msg+= "Please provide a .srep file, or folder containing exactly one .srep file"
+        raise FileNotFoundError(msg)
         return
 
 
