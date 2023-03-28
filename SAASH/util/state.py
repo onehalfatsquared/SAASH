@@ -263,9 +263,9 @@ class StateRefCollection:
             if key not in self.__state_refs:
                 self.__state_refs[key] = value
 
-        return
+        return self
 
-    def __fnf_error(location):
+    def __fnf_error(self, location):
         #raise a file not found error at the current location
 
         msg = "Provided load location ({}) could not be found. ".format(location)
@@ -335,7 +335,7 @@ class StateRepCollection:
         elif isinstance(initMethod, str):
 
             method = "load"
-            load_folder = initMethod
+            load_location = initMethod
 
         elif initMethod is None:
 
@@ -364,7 +364,7 @@ class StateRepCollection:
 
         elif method == "load":
 
-            self.load(load_folder)
+            self.load(load_location)
             self.__was_loaded = True
 
         return
@@ -417,7 +417,7 @@ class StateRepCollection:
 
         return
 
-    def load(self, load_folder):
+    def load(self, load_location):
         #load the StateRefCollection object from the specified folder
 
         file_found = False
@@ -518,9 +518,9 @@ class StateRepCollection:
             if key not in self.__state_reps:
                 self.__state_reps[key] = value
 
-        return
+        return self
 
-    def __fnf_error(location):
+    def __fnf_error(self, location):
         #raise a file not found error at the current location
 
         msg = "Provided load location ({}) could not be found. ".format(location)
