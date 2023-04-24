@@ -27,6 +27,7 @@ import numpy as np
 import hashlib
 import json
 
+import warnings
 
 class StateScraper:
     '''
@@ -495,11 +496,69 @@ class StateRepCollection:
         typeids      = [snap.particles.types[t] for t in types]
         orientations = snap.particles.orientation[indices]
 
+        #shift positions such that the CoM is the origin
+        box       = snap.configuration.box
+        positions = self.__shift_to_origin(positions, box)
+
         #close file
         snaps.close()
 
         #create and return a StateRep object 
         return StateRep(len(types), positions, typeids, orientations)
+
+
+    def __shift_to_origin(self, positions, box):
+        #shift all positions such that the center of mass is the origin
+        #take into account periodic boundary conditions
+
+        #we start by moving all particles to the same quadrant/octant
+        self.__shift_to_same_region(positions, box)
+
+        #compute the center of mass
+        CoM = self.__compute_center(positions.copy())
+
+        #subtract CoM from all particles to center at the origin
+        for i in range(len(positions)):
+            positions[i] -= CoM
+
+        return positions
+        
+
+    def __shift_to_same_region(self, positions, boxes):
+
+        #start by choosing reference particle (arbitrary, use 0). compute displacements
+        reference_pos = positions[0]
+        displacements = positions - reference_pos
+
+        #decompose displacements into a magnitude and a sign
+        magnitudes    = np.abs(displacements)
+        #surpress divide by 0 warning, will never be accessed since 0 < box_L
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            signs     = np.divide(magnitudes, displacements)
+
+        #loop over each particle
+        for i in range(len(positions)):
+
+            #loop over each dimension
+            for dim in range(len(box)):
+
+                #check for all displacements larger than half the box size, add L
+                if magnitudes[i][dim] > box[dim]/2:
+                    positions[i][dim] -= signs[i][dim] * box[dim]
+
+        return
+
+    def __compute_center(self, positions):
+        #get the center of mass of a collection of points (assume fixed mass)
+
+        L = len(positions)
+        CoM = positions[0]
+
+        for i in range(1,L):
+            CoM += positions[i]
+
+        return (CoM / L)
 
     def __set_save_path(self, refCollection):
         #save to the same folder as refCollection was in
