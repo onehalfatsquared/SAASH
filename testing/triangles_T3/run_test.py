@@ -23,8 +23,8 @@ def setup_observer(gsd_file, run_type, observables = None, jump=1):
             observer.add_observable(observable)
 
     #change the start and end frames
-    observer.set_first_frame(3000)
-    observer.set_final_frame(4000)
+    # observer.set_first_frame(3000)
+    observer.set_final_frame(3000)
 
     return observer
 
@@ -42,8 +42,8 @@ if __name__ == "__main__":
     analyze.run_analysis(test_file, ixn_file=ixn_file, observer=observer)
 
     #do a cluster analysis with num_bodies as an observable
-    # observables = ['num_bodies']
-    # observer = setup_observer(gsd_file, 'cluster', observables=observables)
-    # analyze.run_analysis(gsd_file, ixn_file=ixn_file, observer=observer)
+    observables = ['num_bodies', 'indices']
+    observer = setup_observer(test_file, 'cluster', observables=observables, jump=jump)
+    analyze.run_analysis(test_file, ixn_file=ixn_file, observer=observer)
 
 

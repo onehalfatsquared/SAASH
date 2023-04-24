@@ -193,6 +193,7 @@ class ClusterInfo:
         #init an observer
         self.__observer = observer
         self.__observables = observer.get_non_trivial_observables()
+        self.__jump     = observer.get_frame_jump()
 
         #init storage for observed variables
         self.__stored_data = []
@@ -201,10 +202,6 @@ class ClusterInfo:
         #init storage for monomer stats
         self.__from_monomer = dict()
         self.__to_monomer   = dict()
-
-
-        #todo - check that timescale gives number of entries in data. 
-        #may need to offset this by 1, since counting starts at 0
 
 
     def get_transitions(self, t0, lag):
@@ -334,6 +331,10 @@ class ClusterInfo:
     def get_birth_frame(self):
 
         return self.__birth_frame
+
+    def get_frame_jump(self):
+
+        return self.__jump
 
     def is_dead(self):
 

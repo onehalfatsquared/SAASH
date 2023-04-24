@@ -82,11 +82,15 @@ class StateScraper:
         Calls the get_data() method on each trajectory in cluster info
         '''
 
+        #get the number of frames jumped between entries
+        # jump = cluster_info.get_frame_jump()
+
         #loop over each cluster trajectory
         for i in range(len(cluster_info)):
 
             #get the current trajectory and loop over every 2nd entry 
             traj      = cluster_info[i]
+            jump      = traj.get_frame_jump()
             traj_data = traj.get_data()
             traj_len  = len(traj_data)
             for j in range(0, traj_len):
@@ -98,7 +102,7 @@ class StateScraper:
 
                     #create a StateRep and add it to the collection
                     file      = self.__cl_file.split(".cl")[0] + ".gsd"
-                    frame_num = traj.get_birth_frame() + j
+                    frame_num = (traj.get_birth_frame() + j) * jump
                     indices   = data['indices']
                     state_rep = StateRef(file, frame_num, indices)
                     self.__collection.add_state(state, state_rep)
@@ -498,6 +502,7 @@ class StateRepCollection:
 
         #shift positions such that the CoM is the origin
         box       = snap.configuration.box
+        box       = box[np.where(box > 1e-6)] #get rid of the skew components
         positions = self.__shift_to_origin(positions, box)
 
         #close file
@@ -524,7 +529,7 @@ class StateRepCollection:
         return positions
         
 
-    def __shift_to_same_region(self, positions, boxes):
+    def __shift_to_same_region(self, positions, box):
 
         #start by choosing reference particle (arbitrary, use 0). compute displacements
         reference_pos = positions[0]

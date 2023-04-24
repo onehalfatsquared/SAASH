@@ -143,9 +143,13 @@ dmypy.json
 *.npz
 *.np
 *.cl
+*.sizes
+*.fsizes
 
 #pickled objects
 *.pkl
+*.sref
+*.srep
 
 #images
 *.png
