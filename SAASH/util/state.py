@@ -492,7 +492,7 @@ class StateRepCollection:
 
         #open the file and frame referenced
         snaps = gsd.hoomd.open(name=file, mode="rb")
-        snap  = snaps.read_frame(frame)
+        snap  = snaps[frame]
 
         #filter the bodies according to index and grab the required data
         positions    = snap.particles.position[indices]

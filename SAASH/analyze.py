@@ -196,7 +196,7 @@ def handle_cluster(snaps, frames, sim, observer, jump = 1):
 
     #analyze the first frame seperately
     f0 = observer.get_first_frame() + 1
-    old_frame = frame.get_data_from_snap(snaps.read_frame(f0-1), sim, f0-1)
+    old_frame = frame.get_data_from_snap(snaps[f0-1], sim, f0-1)
     old_frame.create_first_frame(cluster_info, f0-1, observer)
 
     print("\nBeginning Cluster Analysis")
@@ -212,7 +212,7 @@ def handle_cluster(snaps, frames, sim, observer, jump = 1):
         monomer_id_sets.append(old_frame.get_monomer_ids())
 
         #get the snapshot for the current frame
-        snap = snaps.read_frame(frame_num)
+        snap = snaps[frame_num]
 
         #do the update for the current frame
         cluster_info, old_frame = cluster.track_clustering(snap, sim, int(frame_num/jump), 
@@ -256,7 +256,7 @@ def handle_bulk(snaps, frames, sim, observer):
         print_progress(frame_num, observer)
 
         #get the snapshot for the current frame
-        snap = snaps.read_frame(frame_num)
+        snap = snaps[frame_num]
 
         #make a Frame object, get the size distribution and append to lists
         fr = frame.get_data_from_snap(snap, sim, frame_num)
@@ -409,7 +409,7 @@ def handle_nanoparticle(snaps, frames, sim, observer):
         print_progress(frame_num, observer)
 
         #get the snapshot for the current frame
-        snap = snaps.read_frame(frame_num)
+        snap = snaps[frame_num]
 
         #get the cluster data for each nanpoparticle
         q = analyze_nano(snap, sim, observer)
@@ -459,7 +459,7 @@ def run_analysis(gsd_file, ixn_file = "interactions.txt", observer = None):
 
     #get the collection of snapshots and get number of frames
     snaps = gsd.hoomd.open(name=gsd_file, mode="rb")
-    snap = snaps.read_frame(0)
+    snap = snaps[0]
     frames = len(snaps)
 
     #gather all the relevant global info into a SimInfo object
