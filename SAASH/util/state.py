@@ -15,6 +15,10 @@ The StateRefCollection can then be used to build a StateRepCollection, a mapping
 State object to a StateRep. This contains all the information needed to initialize the 
 full molecular configuration (body positions, body type ids, and body orientations). 
 
+Alternatively, a StateFrameCollection can be built, which recreates the full simulation 
+snapshot that a particular state came from. 
+
+
 '''
 
 import sys, os
@@ -628,6 +632,215 @@ class StateRep:
     def get_orientations(self):
 
         return self.__orientations
+
+
+class StateFrameCollection:
+
+    '''
+    StateRepCollection stores a dictionary where the keys are State objects
+    and the values are HOOMD gsd snapshots containing that state. 
+
+    Is initialized with a StateRefCollection, containing references to the location
+    of all the unique states encountered in a simulation. The class then opens
+    the file from the Ref, loads the given frame, and saves it in the dict.
+
+    Can also be init by providing a folder containing a single .sframe file, or a 
+    path to a .sframe file, which is then loaded. 
+
+    '''
+
+    def __init__(self, initMethod = None):
+
+        #check which init method is requested - StateRefCollection or string with path
+        if isinstance(initMethod, StateRefCollection):
+
+            method = "construct"
+            refCollection = initMethod
+
+        elif isinstance(initMethod, str):
+
+            method = "load"
+            load_location = initMethod
+
+        elif initMethod is None:
+
+            method = "none"
+
+        else:
+
+            err_msg = "To init StateFrameCollection, please provide either a StateRefCollection\
+                       or path to a folder containing a .sframe file to load from."
+            raise TypeError(err_msg)
+
+
+        #init the class variables
+        self.__state_frames = dict()
+
+        self.__save_path  = ""
+        self.__load_path  = ""
+        self.__was_loaded = False
+
+        #branch based on init method
+        if method == "construct":
+
+            self.__construct_frame_collection(refCollection)
+            self.__set_save_path(refCollection)
+            self.save(self.__save_path)
+
+        elif method == "load":
+
+            self.load(load_location)
+            self.__was_loaded = True
+
+        return
+
+    def get_dict(self):
+
+        return self.__state_frames.copy()
+
+    def get_num_states(self):
+
+        return len(self.__state_frames)
+
+    def get_rep(self, state):
+
+        if state in self.__state_frames:
+            return self.__state_frames[state]
+
+        msg = "{} not found in collection.".format(state)
+        raise KeyError(msg)
+
+        return
+
+    def save(self, save_loc):
+        '''
+        Save self to the internal save path. User has no access to this function b/c
+        this class is intended to be constructed once and not editied after.
+        The save location is the same path as the refCollection the class is init with,
+        but with .srep file extension
+        '''
+
+        #check if the collection was loaded, and save/load paths are same
+        if (self.__was_loaded and self.__load_path == save_loc):
+
+            err_msg = "This save would overwrite the original file at {}".format(self.__load_path)
+            raise RuntimeError(err_msg)
+
+        #check if save_loc is a directory, if so, give default name
+        if os.path.isdir(save_loc):
+            if not save_loc.endswith('/'):
+                save_loc += "/"
+            save_loc += 'state_database.sframe'
+
+        #if the save_loc doesnt end in sref, append the extension
+        if not save_loc.endswith('.sframe'):
+            save_loc += '.sframe'
+
+        #pickle self to the outfile location
+        with open(save_loc,'wb') as outfile:
+            pickle.dump(self, outfile)
+
+        return
+
+    def load(self, load_location):
+        #load the StateRefCollection object from the specified folder
+
+        file_found = False
+
+        #determine if a folder or a 'sref' file was provided
+        if load_location.endswith(".sframe"):
+
+            self.__load_path = load_location
+            file_found = True
+
+        elif os.path.isdir(load_location):
+
+            #search the folder for .sref extensions
+            for file in os.listdir(load_location):
+                if file.endswith(".sframe"):
+
+                    #check if there are several potential files and give error
+                    if (file_found):
+                        msg = "Multiple .sframe files found in {}. Specify a single file".format(self.__folder)
+                        raise RuntimeError(msg)
+
+                    #set path to file loc and flag that a file was found
+                    self.__load_path = os.path.join(load_location, file)
+                    file_found = True
+
+        else:
+
+            self.__fnf_error(load_location)
+       
+
+        if not file_found:
+
+            self.__fnf_error(load_location)
+
+        #unpickle the file and set the dicts equal
+        with open(self.__load_path, 'rb') as f:
+            saved_collection = pickle.load(f)
+
+        self.__state_frames = saved_collection.get_dict().copy()
+
+        return
+
+
+    def __construct_frame_collection(self, refCollection):
+
+        #get the dict of refs from the collection
+        refDict = refCollection.get_dict()
+
+        #loop over all states (keys), create a StateRep using the Ref to find the data
+        for state in refDict.keys():
+
+            stateRef = refDict[state]
+            stateFrame = self.__get_frame(stateRef)
+            self.__state_frames[state] = stateFrame
+
+        return
+
+
+    def __get_frame(self, stateRef):
+        #use the data in stateRef to get the necessary info to create a stateRep
+
+        #get the identifying data
+        file  = stateRef.get_file()
+        frame = stateRef.get_frame()-1
+
+        #open the file and frame referenced
+        with gsd.hoomd.open(name=file, mode="rb") as snaps:
+            snap = snaps[frame]
+
+        return snap
+
+
+    def __set_save_path(self, refCollection):
+        #save to the same folder as refCollection was in
+
+        ref_path = refCollection.get_load_path()
+        self.__save_path = ref_path.split(".sref")[0] + ".sframe"
+
+        return
+
+
+    def __add__(self, other_collection):
+        #add in all states present in other_collection not in self
+
+        for key,value in other_collection.get_dict().items():
+
+            if key not in self.__state_frames:
+                self.__state_frames[key] = value
+
+        return self
+
+    def __fnf_error(self, location):
+        #raise a file not found error at the current location
+
+        msg = "Provided load location ({}) could not be found. ".format(location)
+        msg+= "Please provide a .sframe file, or folder containing exactly one .sframe file"
+        raise FileNotFoundError(msg)
+        return
 
 
 class State:
