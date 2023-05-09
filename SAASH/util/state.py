@@ -86,8 +86,7 @@ class StateScraper:
         Calls the get_data() method on each trajectory in cluster info
         '''
 
-        #get the number of frames jumped between entries
-        # jump = cluster_info.get_frame_jump()
+        #TODO: do this as function of monomer fraction?
 
         #loop over each cluster trajectory
         for i in range(len(cluster_info)):
@@ -802,7 +801,7 @@ class StateFrameCollection:
 
 
     def __get_frame(self, stateRef):
-        #use the data in stateRef to get the necessary info to create a stateRep
+        #use the data in stateRef to grab the referenced frame
 
         #get the identifying data
         file  = stateRef.get_file()
