@@ -495,6 +495,9 @@ class StateRepCollection:
 
         #open the file and frame referenced
         snaps = gsd.hoomd.open(name=file, mode="rb")
+        L = len(snaps)
+        if frame == L:
+            frame -= 1
         snap  = snaps[frame]
 
         #filter the bodies according to index and grab the required data
@@ -805,10 +808,14 @@ class StateFrameCollection:
 
         #get the identifying data
         file  = stateRef.get_file()
-        frame = stateRef.get_frame()-1
+        frame = stateRef.get_frame()
 
         #open the file and frame referenced
         with gsd.hoomd.open(name=file, mode="rb") as snaps:
+            snaps = gsd.hoomd.open(name=file, mode="rb")
+            L = len(snaps)
+            if frame == L:
+                frame -= 1
             snap = snaps[frame]
 
         return snap
