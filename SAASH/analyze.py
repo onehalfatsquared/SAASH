@@ -463,7 +463,15 @@ def run_analysis(gsd_file, ixn_file = "interactions.txt", observer = None):
     frames = len(snaps)
 
     #gather all the relevant global info into a SimInfo object
-    sim = SimInfo(snap, frames, ixn_file = ixn_file)
+
+    #check observer for optional parameters to simInfo
+    if observer is not None and observer.get_ngrid_cutoff() is not None:
+        
+        sim = SimInfo(snap, frames, ixn_file = ixn_file, 
+                      ngrid_R = observer.get_ngrid_cutoff())
+    else:
+
+        sim = SimInfo(snap, frames, ixn_file = ixn_file)
 
     #check for observer. if not found create default observer with a warning
     observer = check_observer(observer, gsd_file, sim)

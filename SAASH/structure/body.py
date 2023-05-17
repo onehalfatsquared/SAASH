@@ -238,6 +238,11 @@ class Body:
         self.__bonded_list.append(body)
         self.__bond_types.append(bond.get_name())
 
+    def distance_to_body(self, other_body, box):
+        #return the distance from body center to another body center
+
+        return distance(self.__position, other_body.get_position(), box)
+
     #setter functions
 
     def set_position(self, position):
@@ -468,6 +473,8 @@ def get_bonded_bodies(bodies, sim, bond_dict):
 
         #get all the nearby bodies from the neighborgrid
         nearby_bodies = ngrid.getNeighborhood(current_body)
+        # print(current_body.get_id(), len(nearby_bodies), 
+        #     [current_body.distance_to_body(b,sim.box_dim) for b in nearby_bodies])
 
         # print("Current: ", body, current_body.get_position())
         body += 1

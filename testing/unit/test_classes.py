@@ -6,6 +6,7 @@ import sys
 sys.path.insert(0, '../../SAASH')
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 from structure import body
 from structure import cluster
@@ -37,14 +38,14 @@ def testNeighborGrid2D():
 
     #define periodic 9x9 grid and create the neighborgrid
     lims = [[0,9],[0,9]]
-    R = 1
+    R = 1.5
     periodic = (1,1)
     ng = neighborgrid.Neighborgrid(lims, R, periodic)
 
     #create test bodies with positions on nodes of lattice
     bodies = []
-    for i in range(10):
-        for j in range(10):
+    for i in range(9):
+        for j in range(9):
 
                 b = body.Body(np.array([[1,1]]),[1],1)
                 b.set_position(np.array([i,j]))
@@ -62,6 +63,69 @@ def testNeighborGrid2D():
     print("2D Neighborgrid Test Passed")
 
     return
+
+def testNeighborGrid3D():
+
+    #define periodic 9x9x9 grid and create the neighborgrid
+    lims = [[0,9],[0,9],[0,9]]
+    R = 1.5
+    periodic = (1,1,1)
+    ng = neighborgrid.Neighborgrid(lims, R, periodic)
+
+    #create test bodies with positions on nodes of lattice
+    bodies = []
+    for i in range(9):
+        for j in range(9):
+            for k in range(9):
+
+                b = body.Body(np.array([[1,1,1]]),[1],1)
+                b.set_position(np.array([i,j,k]))
+                bodies.append(b)
+
+    #update the neighbor list with these bodies
+    ng.update(bodies)
+    test_body = bodies[17]
+    # print("Test body located at {}".format(test_body.get_position()))
+    # for entry in ng.getNeighborhood(test_body):
+    #   print("Neighbor found at {}".format(entry.get_position()))
+
+    # print(len(list(ng.getNeighborhood(test_body))))
+    assert(len(list(ng.getNeighborhood(test_body))) == 18)
+
+    print("3D Neighborgrid Test Passed")
+    return
+
+def plotNGpoints():
+
+    R = np.linspace(0.5,2.1,150)
+    values = []
+
+    for i in range(150):
+
+        lims = [[0,9],[0,9]]
+        Ri = R[i]
+        periodic = (1,1)
+        ng = neighborgrid.Neighborgrid(lims, Ri, periodic)
+
+        #create test bodies with positions on nodes of lattice
+        bodies = []
+        for i in range(9):
+            for j in range(9):
+
+                b = body.Body(np.array([[1,1]]),[1],1)
+                b.set_position(np.array([i,j]))
+                bodies.append(b)
+
+        #update the neighbor list with these bodies
+        ng.update(bodies)
+        test_body = bodies[0]
+        values.append(len(list(ng.getNeighborhood(test_body))))
+
+    plt.plot(R, values)
+    plt.show()
+    return
+
+
 
 def testBodyBind():
 
@@ -117,4 +181,7 @@ if __name__ == "__main__":
     #test setup of classes for body-body interactions
     testBonds()
     testNeighborGrid2D()
+    testNeighborGrid3D()
     testBodyBind()
+
+    # plotNGpoints()

@@ -22,6 +22,7 @@ class Neighborgrid:
         
         #set the bounding box for the simulation
         self.lim = np.array(lim)
+        self.domain_size = self.lim[:,1] - self.lim[:,0]
 
         #set which dimensions are periodic
         self.periodic = periodic
@@ -40,8 +41,8 @@ class Neighborgrid:
         self.boxSize = np.zeros(self.dim, dtype=float)
 
         for i in range(self.dim):
-            self.numD[i]    = np.floor((self.lim[i][1] - self.lim[i][0]) / (self.R))
-            self.boxSize[i] = (self.lim[i][1] - self.lim[i][0]) / self.numD[i]
+            self.numD[i]    = np.floor(self.domain_size[i] / (self.R/2))
+            self.boxSize[i] = self.domain_size[i] / self.numD[i]
         
         #init a dict to store grid cell to particle mapping
         self.map = {}
@@ -53,7 +54,7 @@ class Neighborgrid:
         self.shift = np.array(self.shift)
 
         #list of all grid cell moves to check for neighbors
-        self.indexAdjustment = list(product([-1,0,1], repeat=self.dim))
+        self.indexAdjustment = list(product([-2,-1,0,1,2], repeat=self.dim))
 
 
     def update(self, bodies):
@@ -81,7 +82,7 @@ class Neighborgrid:
         #         raise ValueError("Particle is outside the set bounds")
 
         #vectorized version - reduces total runtime by about 10%
-        if ( (position < self.lim[:,0]).any() or (position > self.lim[:,1]).any() ):
+        if ( (position < self.lim[:,0]).any() or (position >= self.lim[:,1]).any() ):
             raise ValueError("Particle is outside the set bounds")
 
         #convert to an index - tuple for use as key in map
@@ -117,12 +118,11 @@ class Neighborgrid:
             if box in self.map:
                 if isinstance(self.map[box], list):
                    for body_j in self.map[box]:
-                        '''was previously a distance check here, but interactions are not
-                           at the body level, so I removed it for purposes of gridding'''
 
-                        #check that body_j is not the original body. if not, append body_j
+                        #check that body_j is not the original body and within cutoff
                         if body != body_j:
-                            body_list.append(body_j)
+                            if body_j.distance_to_body(body, self.domain_size) < self.R:
+                                body_list.append(body_j)
 
         return body_list
                

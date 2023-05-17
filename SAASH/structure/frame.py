@@ -728,6 +728,7 @@ def get_data_from_snap(snap, sim, frame_num):
             monomer_ids.append(group[0])
             num_monomers += 1
 
+
     #set the monomer fraction
     monomer_frac = num_monomers / len(bodies)
     

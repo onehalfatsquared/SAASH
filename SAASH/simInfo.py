@@ -27,7 +27,8 @@ from .util import neighborgrid as ng
 
 class SimInfo:
 
-    def __init__(self, snap, frames, ixn_file = "interactions.txt", cutoff_mult = 1.35, radius_mult = 1.2):
+    def __init__(self, snap, frames, ixn_file = "interactions.txt", cutoff_mult = 1.35, 
+                 radius_mult = 1.6, ngrid_R = None):
 
         #print an initialization message
         print("\nInitializing SimInfo and Neighborgrid...")
@@ -37,6 +38,7 @@ class SimInfo:
         print("This simulation output contains {} frames".format(frames))
         self.cutoff_mult = cutoff_mult
         self.radius_mult = radius_mult
+        self.ngrid_R     = ngrid_R
 
         #set the bond and nanoparticle information using ixn_file
         self.bonds = []
@@ -256,10 +258,18 @@ class SimInfo:
             #Assume that the simulations are periodic in each dimension
             periodic.append(1)
 
-        #set the interaction range as the longest bond dist or particle size in the sim
-        R = np.maximum(self.largest_bond_distance * self.cutoff_mult, 
-                       self.max_subunit_size * 2 * self.radius_mult)
-        print("The largest center-to-center distance for neighborgrid has been set to", R)
+        #check for user set neighborgrid distance
+        if self.ngrid_R is not None:
+            
+            R = self.ngrid_R
+            print("Using user specified neighborgrid distance ", R)
+
+        else:
+
+            #set the interaction range as the longest bond dist or particle size in the sim
+            R = np.maximum(self.largest_bond_distance * self.cutoff_mult, 
+                           self.max_subunit_size * 2 * self.radius_mult)
+            print("The largest center-to-center distance for neighborgrid has been set to", R)
 
         #construct the neighborgrid
         self.ngrid = ng.Neighborgrid(lims, R, periodic)

@@ -50,6 +50,9 @@ class Observer:
         self.__final_frame = None
         self.__jump        = jump
 
+        #set the neighborgrid default cutoff to None, can be overwritten
+        self.__ngrid_R = None
+
         #init variable to store the runtype
         self.__run_type = None
         if run_type:
@@ -112,6 +115,17 @@ class Observer:
     def get_frame_jump(self):
 
         return self.__jump
+
+    def get_ngrid_cutoff(self):
+
+        return self.__ngrid_R
+
+    def set_ngrid_cutoff(self, ngrid_R):
+        #manually set the value for the neighborgrid cutoff distance
+        #overwrites the default calculation
+
+        self.__ngrid_R = ngrid_R
+        return
 
 
     def set_first_frame(self, first_frame):
