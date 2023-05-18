@@ -203,7 +203,7 @@ class Frame:
         if focus_list is not None:
 
             #get cluster sizes and detailed info on sizes in the focus list
-            size_dict, focus_dict = self.__get_cluster_sizes_focused(focus_list)
+            size_dict, focus_dict = self.__get_cluster_sizes_focused(focus_list, observer)
 
         else:
 
@@ -241,7 +241,7 @@ class Frame:
 
         return size_dict
 
-    def __get_cluster_sizes_focused(self, focus_list):
+    def __get_cluster_sizes_focused(self, focus_list, observer):
         #same as other get_sizes, but also tracks number of each microstate for sizes in list
 
         '''init a dictionary to store histogram data
@@ -259,16 +259,33 @@ class Frame:
             size_dict[L] += 1
 
             if L in focus_list:
+                #increment the counter for this particular microstate
 
-                # focus_dict[L].append(clust.get_bond_types())
-                focus_dict[L][tuple(sorted(clust.get_bond_types().items()))] += 1
+                microstate_rep = self.__make_microstate_representation(clust, observer)
+                focus_dict[L][microstate_rep] += 1
 
         return size_dict, focus_dict
 
+    def __make_microstate_representation(self, cluster, observer):
+        '''
+        Constructs a representation of a microstate using all easily human-interpretable
+        distinguishing properties set in the observer. 
 
+        For example, imagine a linear polymer of two subunit types in the orientation ABBA.
+        If "bonds" is set in the observer we will return (("A-B",2),("B-B",1)). 
+        If "types" is set as well then it becomes (("A",2),("B",2),("A-B",2),("B-B",1))
+        '''
 
+        #get the list of observables to compute and grab them from cluster
+        common = sorted(observer.get_identifying_observables(),reverse=True)
+        values = [observer.compute_observable(cluster,obs) for obs in common]
 
+        #sort each value for unique representations and flatten the list
+        values = [sorted(quantities.items()) for quantities in values]
+        values = sum(values, [])
 
+        #return a tuple with the properties
+        return tuple(values)
 
 
     #private utility functions for the update method

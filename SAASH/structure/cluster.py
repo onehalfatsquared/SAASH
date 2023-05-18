@@ -154,6 +154,13 @@ class Cluster:
 
         return self.__last_updated
 
+    def get_body_types(self):
+        #return a dict counting how many of each body type are in the cluster
+
+        all_types = [bod.get_type() for bod in self.__bodies]
+
+        return dict(Counter(all_types))
+
     def get_bond_types(self):
         #return a dict with each bond type present and how many of those bonds there are
 
@@ -244,7 +251,7 @@ class ClusterInfo:
         #set the given cluster to be the parent of the cluster, i.e. first in stored data
 
         if not self.__has_parent:
-            self.__stored_data.insert(0, self.__compute_coordinate(cluster))
+            self.__stored_data.insert(0, self.__compute_observables(cluster))
             self.__stored_data[0]['monomer_fraction'] = prev_monomer
             self.__has_parent = True
 
@@ -274,7 +281,7 @@ class ClusterInfo:
         if (frame_num > self.__last_updated and not self.__is_dead):
 
             #compute a dictionary of requested values using this cluster
-            self.__stored_data.append(self.__compute_coordinate(cluster))
+            self.__stored_data.append(self.__compute_observables(cluster))
 
             #append the monomer fraction when this cluster formed
             self.__stored_data[-1]['monomer_fraction'] = monomer_frac
@@ -288,7 +295,7 @@ class ClusterInfo:
         #update the from_monomer list to denote a transition from monomer to cluster
 
         #compute a dictionary of requested values using this cluster
-        self.__from_monomer[frame_num] = self.__compute_coordinate(cluster)
+        self.__from_monomer[frame_num] = self.__compute_observables(cluster)
 
         #append the number of added monomers and fraction from previous timestep
         self.__from_monomer[frame_num]['num_monomers']     = num_monomers
@@ -300,7 +307,7 @@ class ClusterInfo:
         #update the to_monomer list to denote a transition from cluster to monomer
 
         #compute a dictionary of requested values using this cluster
-        self.__to_monomer[frame_num] = self.__compute_coordinate(cluster)
+        self.__to_monomer[frame_num] = self.__compute_observables(cluster)
 
         #append the number of added monomers and fraction from previous timestep
         self.__to_monomer[frame_num]['num_monomers']     = num_monomers
@@ -365,11 +372,11 @@ class ClusterInfo:
 
         return
 
-    def __compute_coordinate(self, cluster):
+    def __compute_observables(self, cluster):
         '''Compute the all quantities stored in the observer on the given cluster'''
 
 
-        return self.__observer.compute_coordinate(cluster)
+        return self.__observer.compute_observables(cluster)
 
 
     def __handle_large(self, t0, lag, events):

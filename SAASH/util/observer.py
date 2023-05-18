@@ -45,6 +45,9 @@ class Observer:
         #init a set of observables to compute
         self.__observable_set = set()
 
+        #define common identifying observables for clusters
+        self.__identifying_set = set(['bonds', 'types'])
+
         #init defaults for frames
         self.__first_frame = 0
         self.__final_frame = None
@@ -200,7 +203,7 @@ class Observer:
 
         return 
 
-    def compute_coordinate(self, cluster):
+    def compute_observables(self, cluster):
         '''this computes various observables for the cluster, based on user input
            given to the observer class. Default is simply number of bodies'''
 
@@ -210,32 +213,46 @@ class Observer:
         #get the list of observables requested, and compute them from cluster
         observables = self.get_observables()
         for obs in observables:
-
-            if obs == "num_bodies":
-
-                property_dict['num_bodies'] = len(cluster.get_bodies())
-
-            elif obs == "positions":
-
-                property_dict['positions'] = cluster.get_body_positions()
-
-            elif obs == "bonds":
-
-                property_dict['bonds'] = cluster.get_bond_types()
-
-            elif obs == "indices":
-
-                property_dict['indices'] = cluster.get_body_ids()
-
-            else:
-
-                raise("The requested property is not implemented. Check that it is"\
-                    " implemented and spelled correctly")
-
-
-            
+            property_dict[obs] = self.compute_observable(cluster, obs)
 
         return property_dict
+
+    def compute_observable(self, cluster, obs):
+        #compute the observable specified by obs on the cluster
+
+        if obs == "num_bodies":
+
+            return len(cluster.get_bodies())
+
+        elif obs == "positions":
+
+            return cluster.get_body_positions()
+
+        elif obs == "bonds":
+
+            return cluster.get_bond_types()
+
+        elif obs == "indices":
+
+            return cluster.get_body_ids()
+
+        elif obs == "types":
+
+            return cluster.get_body_types()
+
+        else:
+
+            raise("The requested property is not implemented. Check that it is"\
+                " implemented and spelled correctly")
+
+        return
+
+
+    def get_identifying_observables(self):
+        #return the active observables that are in the common identifying set
+
+        common = [obs for obs in self.get_observables() if obs in self.__identifying_set]
+        return common
 
     def __set_outfile_name(self, gsd_file):
         #use the prefix up to '.gsd' to set a file path for the output of this analysis
