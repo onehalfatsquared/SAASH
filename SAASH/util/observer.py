@@ -240,6 +240,10 @@ class Observer:
 
             return cluster.get_body_types()
 
+        elif obs == "bond_counts":
+
+            return cluster.get_bond_counts()
+
         else:
 
             raise("The requested property is not implemented. Check that it is"\

@@ -172,6 +172,13 @@ class Cluster:
         bond_type_dict = dict(Counter(flat_list))
         return {k:int(bond_type_dict[k]/2) for k in bond_type_dict}
 
+    def get_bond_counts(self):
+        #return a dict counting how many subunits have a given number of bonds
+
+        all_bond_counts = [bod.get_num_bonds() for bod in self.__bodies]
+
+        return dict(Counter(all_bond_counts))
+
     def __update_body_ids(self):
 
         #update the bodies in this cluster to have the cluster's id

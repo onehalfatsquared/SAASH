@@ -738,7 +738,12 @@ def get_data_from_snap(snap, sim, frame_num):
             #extract the involved bodies from the group and create a cluster
             body_list = [bodies[q] for q in group]
             clusters.append(clust.Cluster(body_list, frame_num))
-            # print(clusters[-1].get_bond_types())
+
+            #DEBUG:
+            # if clusters[-1].get_num_bodies() == 60:
+            #     body0 = clusters[-1].get_bodies()[0]
+            #     dists = sorted([b.distance_to_body(body0, sim.box_dim) for b in clusters[-1].get_bodies()])
+            #     print(dists[0:4])
 
         #increment the number of free monomers
         else:

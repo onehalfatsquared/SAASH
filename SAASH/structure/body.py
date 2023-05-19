@@ -299,6 +299,10 @@ class Body:
 
         return self.__bonded_list
 
+    def get_num_bonds(self):
+
+        return len(self.__bonded_list)
+
     def get_bond_types(self):
 
         return self.__bond_types
@@ -473,8 +477,6 @@ def get_bonded_bodies(bodies, sim, bond_dict):
 
         #get all the nearby bodies from the neighborgrid
         nearby_bodies = ngrid.getNeighborhood(current_body)
-        # print(current_body.get_id(), len(nearby_bodies), 
-        #     [current_body.distance_to_body(b,sim.box_dim) for b in nearby_bodies])
 
         # print("Current: ", body, current_body.get_position())
         body += 1

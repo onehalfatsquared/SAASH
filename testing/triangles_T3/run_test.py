@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
     jump = 100
     
-    observables = ['num_bodies', 'indices', 'bonds']
+    observables = ['num_bodies', 'indices', 'bonds', 'bond_counts']
 
     #do a bulk analysis run - tracks number of clusters of each size every jump frames
     observer = setup_observer(test_file, 'bulk', jump=jump, observables=observables)
