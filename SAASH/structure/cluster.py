@@ -503,7 +503,7 @@ class ClusterInfo:
 
         #if the cluster dies, append the number of frames till the end
         if self.__is_dead or self.__is_absorbed:
-            final_frame = self.__observer.get_final_frame()/self.__observer.get_frame_jump()
+            final_frame = int(self.__observer.get_final_frame()/self.__observer.get_frame_jump())
             L = [0] * (final_frame - self.__death_frame)
             time_series = sum(time_series, L, [])
 
