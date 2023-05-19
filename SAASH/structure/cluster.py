@@ -476,7 +476,9 @@ class ClusterInfo:
     def get_filtered_time_series(self, conditions):
         '''
         This function returns a time series of 0s and 1s indicating which frames the cluster
-        satisfies the user specified conditions. Takes birth frame into account.  
+        satisfies the user specified conditions. Takes birth and death frame into account.  
+
+        If conditions is a list of dicts, we return a 1 if any of the conditions is true.
         '''
 
         #init storage for the time series w/ 0s until the birth frame
@@ -488,6 +490,13 @@ class ClusterInfo:
         #exclude first data point in case of a parent
         if self.__has_parent:
             relevant_data.pop(0)
+
+        #exclude last data point in case of absorbed
+        if self.__is_absorbed:
+            relevant_data.pop()
+
+        #set the true final frame
+        final_frame = int(self.__observer.get_final_frame()/self.__observer.get_frame_jump())
 
         #loop over the stored time series
         for i in range(len(relevant_data)):
@@ -503,19 +512,37 @@ class ClusterInfo:
 
         #if the cluster dies, append the number of frames till the end
         if self.__is_dead or self.__is_absorbed:
-            final_frame = int(self.__observer.get_final_frame()/self.__observer.get_frame_jump())
             L = [0] * (final_frame - self.__death_frame)
             time_series = sum([time_series, L], [])
 
+        #do error checking - look into this issue
+        if len(time_series) != final_frame:
+            return np.zeros(final_frame, dtype=int)
+
         return np.array(time_series)
 
-
     def __check_filters(self, current_data, conditions):
-        #check that the stored data satisfies all conditions
+        #if conditions is a list, check that any of them are true
 
-        for observable in conditions:
+        if not isinstance(conditions, list):
+            conditions = [conditions]
 
-            desired_value = conditions[observable]
+        for condition_set in conditions:
+
+            satisfied = self.__check_filter(current_data, condition_set)
+            if satisfied:
+                return True
+
+        #if none are met, return false
+        return False
+
+
+    def __check_filter(self, current_data, condition):
+        #check that the stored data satisfies all constraints of the condition
+
+        for observable in condition:
+
+            desired_value = condition[observable]
 
             try:
                 measured_value = current_data[observable]
