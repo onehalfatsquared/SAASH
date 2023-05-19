@@ -473,6 +473,66 @@ class ClusterInfo:
 
         return events
 
+    def get_filtered_time_series(self, conditions):
+        '''
+        This function returns a time series of 0s and 1s indicating which frames the cluster
+        satisfies the user specified conditions. Takes birth frame into account.  
+        '''
+
+        #init storage for the time series w/ 0s until the birth frame
+        time_series = [0] * self.__birth_frame
+
+        #copy the stored data to reference
+        relevant_data = self.__stored_data.copy()
+
+        #exclude first data point in case of a parent
+        if self.__has_parent:
+            relevant_data.pop(0)
+
+        #loop over the stored time series
+        for i in range(len(relevant_data)):
+
+            #get the current time point data
+            current_data = relevant_data[i]
+
+            #check that it passes all of the filters
+            if self.__check_filters(current_data, conditions):
+                time_series.append(1)
+            else:
+                time_series.append(0)
+
+        #if the cluster dies, append the number of frames till the end
+        if self.__is_dead or self.__is_absorbed:
+            final_frame = self.__observer.get_final_frame()/self.__observer.get_frame_jump()
+            L = [0] * (final_frame - self.__death_frame)
+            time_series = sum(time_series, L, [])
+
+        return np.array(time_series)
+
+
+    def __check_filters(self, current_data, conditions):
+        #check that the stored data satisfies all conditions
+
+        for observable in conditions:
+
+            desired_value = conditions[observable]
+
+            try:
+                measured_value = current_data[observable]
+            except KeyError:
+                err_msg = "The observable {} was not computed in the cluster analysis\n".format(observable)
+                err_msg+= "Please re-run the analysis with {} added to the observer\n".format(observable)
+                raise KeyError(err_msg)
+
+            if desired_value != measured_value:
+                return False
+
+        #if we reach here, all values match, return true
+        return True
+
+
+
+
 
 
 
