@@ -876,6 +876,12 @@ class State:
     def get_properties(self):
         
         return self.__properties
+        
+    def get_all_properties(self):
+    	
+    	all_prop = self.__properties.copy()
+    	all_prop['num_bodies'] = self.get_size()
+    	return all_prop
 
     def get_hash(self):
             
