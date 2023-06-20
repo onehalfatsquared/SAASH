@@ -555,7 +555,7 @@ def setupM2D2M():
     return cluster_info
 
 def setupDDM():
-    #example trajectory for 2 monomers to dimer to 2 monomers
+    #example trajectory for 2 dimers and a monomer to pentamer
 
     #init arrays for storage
     old_bodies = []
