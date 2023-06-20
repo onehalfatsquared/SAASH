@@ -245,7 +245,7 @@ class ClusterInfo:
 
         #if looking at first frame, add in monomerization events
         #if splitting from a parent, skip this. these transitions are counted by handle_large
-        if t0 == 0 and not self.__has_parent:
+        if t0 == 0 and not self.__has_parent and self.__birth_frame != t0:
 
             events = self.__handle_time_0(lag, events)
 
@@ -515,7 +515,7 @@ class ClusterInfo:
             L = [0] * (final_frame - self.__death_frame)
             time_series = sum([time_series, L], [])
 
-        #do error checking - look into this issue
+        #do error checking - TODO look into this issue
         if len(time_series) != final_frame:
             return np.zeros(final_frame, dtype=int)
 

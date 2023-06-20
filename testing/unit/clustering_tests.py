@@ -155,14 +155,14 @@ def testGetEventsWithLag():
 
     cluster_info = examples.setupExample('4step')
 
-    # print(state2int(cluster_info[1].get_transitions(0,1)))
+    # print(state2int(cluster_info[1].get_transitions(0,2)))
 
     #can do a thorough check of all of the expected outputs
     #main cluster checks
-    assert(state2int(cluster_info[1].get_transitions(0,1)) == [(3,3),(1,3),(1,3),(1,3)])
-    assert(state2int(cluster_info[1].get_transitions(0,2)) == [(3,4),(1,4),(1,3),(1,3),(1,3)])
-    assert(state2int(cluster_info[1].get_transitions(0,3)) == [(3,7),(1,7),(1,4),(1,4),(1,4)])
-    assert(state2int(cluster_info[1].get_transitions(0,4)) == [(3,6),(1,6),(3,1),(1,7),(1,7),(1,7)])
+    assert(state2int(cluster_info[1].get_transitions(0,1)) == [(3,3)])
+    assert(state2int(cluster_info[1].get_transitions(0,2)) == [(3,4),(1,4)])
+    assert(state2int(cluster_info[1].get_transitions(0,3)) == [(3,7),(1,7)])
+    assert(state2int(cluster_info[1].get_transitions(0,4)) == [(3,6),(1,6),(3,1)])
     assert(state2int(cluster_info[1].get_transitions(1,1)) == [(3,4),(1,4)])
     assert(state2int(cluster_info[1].get_transitions(1,2)) == [(3,7),(1,7)])
     assert(state2int(cluster_info[1].get_transitions(1,3)) == [(3,6),(1,6),(3,1)])
@@ -171,9 +171,9 @@ def testGetEventsWithLag():
     assert(state2int(cluster_info[1].get_transitions(3,1)) == [(7,6),(7,1)])
 
     #side cluster checks
-    assert(state2int(cluster_info[0].get_transitions(0,1)) == [(3,3),(1,3),(1,3),(1,3)])
-    assert(state2int(cluster_info[0].get_transitions(0,2)) == [(3,3),(1,3),(1,3),(1,3)])
-    assert(state2int(cluster_info[0].get_transitions(0,3)) == [(3,7),(1,3),(1,3),(1,3)])
+    assert(state2int(cluster_info[0].get_transitions(0,1)) == [(3,3)])
+    assert(state2int(cluster_info[0].get_transitions(0,2)) == [(3,3)])
+    assert(state2int(cluster_info[0].get_transitions(0,3)) == [(3,7)])
     assert(state2int(cluster_info[0].get_transitions(1,1)) == [(3,3)])
     assert(state2int(cluster_info[0].get_transitions(1,2)) == [(3,7)])
     assert(state2int(cluster_info[0].get_transitions(2,1)) == [(3,7)])
@@ -192,14 +192,14 @@ def testMonomerization(n=2):
     # print(cluster_info[0].get_data())
     # print(cluster_info[0].get_monomer_loss_data())
 
-    # print(cluster_info[0].get_transitions(0,3))
+    # print(cluster_info[0].get_transitions(0,1))
     # print(state2int(cluster_info[0].get_transitions(0,3)))
     # print(sum([[(n,1)]*n,[(1,n)]*n],[]))
 
     #main cluster checks
-    assert(state2int(cluster_info[0].get_transitions(0,1)) == sum([[(n,n)],[(1,n)]*n],[]))
-    assert(state2int(cluster_info[0].get_transitions(0,2)) == sum([[(n,n)],[(1,n)]*n],[]))
-    assert(state2int(cluster_info[0].get_transitions(0,3)) == sum([[(n,1)]*n,[(1,n)]*n],[]))
+    assert(state2int(cluster_info[0].get_transitions(0,1)) == [(n,n)])
+    assert(state2int(cluster_info[0].get_transitions(0,2)) == [(n,n)])
+    assert(state2int(cluster_info[0].get_transitions(0,3)) == [(n,1)]*n)
     assert(state2int(cluster_info[0].get_transitions(1,1)) == [(n,n)])
     assert(state2int(cluster_info[0].get_transitions(1,2)) == [(n,1)]*n)
     assert(state2int(cluster_info[0].get_transitions(2,1)) == [(n,1)]*n)
@@ -217,9 +217,9 @@ def testMultiStepLoss():
     # print(cluster_info[0].get_monomer_loss_data())
 
     # print(cluster_info[0].get_transitions(0,3))
-    assert(state2int(cluster_info[0].get_transitions(0,1)) == [(4,3),(4,1),(1,4),(1,4),(1,4),(1,4)])
-    assert(state2int(cluster_info[0].get_transitions(0,2)) == [(4,2),(4,1),(4,1),(1,3),(1,3),(1,3)])
-    assert(state2int(cluster_info[0].get_transitions(0,3)) == [(4,1),(4,1),(4,1),(4,1),(1,2),(1,2)])
+    assert(state2int(cluster_info[0].get_transitions(0,1)) == [(4,3),(4,1)])
+    assert(state2int(cluster_info[0].get_transitions(0,2)) == [(4,2),(4,1),(4,1)])
+    assert(state2int(cluster_info[0].get_transitions(0,3)) == [(4,1),(4,1),(4,1),(4,1)])
     assert(state2int(cluster_info[0].get_transitions(1,1)) == [(3,2),(3,1)])
     assert(state2int(cluster_info[0].get_transitions(1,2)) == [(3,1),(3,1),(3,1)])
     assert(state2int(cluster_info[0].get_transitions(2,1)) == [(2,1),(2,1)])
@@ -264,13 +264,13 @@ def testMonomerSwap2():
     # print(cluster_info[0].get_transitions(0,1))
     # print(cluster_info[1].get_transitions(0,1))
 
-    # print(state2int(cluster_info[1].get_transitions(0,1)))
+    # print(state2int(cluster_info[0].get_transitions(0,1)))
 
 
     assert(cluster_info[0].get_data()[0]['num_bodies'] == 2)
     assert(cluster_info[0].get_data()[1]['num_bodies'] == 2)
     assert(cluster_info[1].get_data()[0]['num_bodies'] == 2)
-    assert(state2int(cluster_info[0].get_transitions(0,1)) == [(2,2),(1,2),(1,2),(1,2)])
+    assert(state2int(cluster_info[0].get_transitions(0,1)) == [(2,2),(1,2)])
     assert(state2int(cluster_info[1].get_transitions(0,1)) == [(1,2)])
     
 
@@ -323,8 +323,8 @@ def testDimerDimerMonomer():
     assert(cluster_info[0].get_data()[1]['num_bodies'] == 5)
     assert(cluster_info[0].get_data()[0]['num_bodies'] == 2)
     assert(cluster_info[0].get_data()[1]['num_bodies'] == 5)
-    assert(state2int(cluster_info[0].get_transitions(0,1)) == [(2,5),(1,5),(1,2),(1,2)])
-    assert(state2int(cluster_info[1].get_transitions(0,1)) == [(2,5),(1,2),(1,2)])
+    assert(state2int(cluster_info[0].get_transitions(0,1)) == [(2,5),(1,5)])
+    assert(state2int(cluster_info[1].get_transitions(0,1)) == [(2,5)])
 
 
     print("DDM Test Passed")

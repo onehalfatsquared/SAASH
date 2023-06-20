@@ -740,10 +740,10 @@ def get_data_from_snap(snap, sim, frame_num):
             clusters.append(clust.Cluster(body_list, frame_num))
 
             #DEBUG:
-            # if clusters[-1].get_num_bodies() == 60:
+            # if clusters[-1].get_num_bodies() == 12:
             #     body0 = clusters[-1].get_bodies()[0]
             #     dists = sorted([b.distance_to_body(body0, sim.box_dim) for b in clusters[-1].get_bodies()])
-            #     print(dists[0:4])
+            #     print(dists[0:8])
 
         #increment the number of free monomers
         else:
