@@ -63,12 +63,15 @@ class ClusterOut:
        monomer fractions and monomer ids. 
     '''
 
-    def __init__(self, cluster_info, monomer_frac, monomer_ids):
+    def __init__(self, cluster_info, monomer_frac, monomer_ids, monomer_types=None):
 
         #init three variables that store the output of a cluster type simulation
         self.cluster_info = cluster_info
         self.monomer_frac = monomer_frac
         self.monomer_ids  = monomer_ids
+        self.monomer_types= monomer_types
+
+        return
 
 
 
@@ -191,8 +194,9 @@ def handle_cluster(snaps, frames, sim, observer, jump = 1):
     cluster_info  = []
 
     #init arrays for the time dependence of monomers
-    mon_fracs = []
-    monomer_id_sets = []
+    mon_fracs         = []
+    monomer_id_sets   = []
+    monomer_type_sets = []
 
     #analyze the first frame seperately
     f0 = observer.get_first_frame() + 1
@@ -207,9 +211,11 @@ def handle_cluster(snaps, frames, sim, observer, jump = 1):
 
         print_progress(frame_num, observer)
 
-        #get the monomer fraction and ids from the previous frame
+        #get the monomer fraction and ids/types from the previous frame
         mon_fracs.append(old_frame.get_monomer_fraction())
         monomer_id_sets.append(old_frame.get_monomer_ids())
+        if sim.multitype():
+            monomer_type_sets.append(old_frame.get_monomer_types())
 
         #get the snapshot for the current frame
         snap = snaps[frame_num]
@@ -220,7 +226,7 @@ def handle_cluster(snaps, frames, sim, observer, jump = 1):
                                                            observer)
 
     #create a clusterOut object with the relevant data and return it
-    out_data = ClusterOut(cluster_info, mon_fracs, monomer_id_sets)
+    out_data = ClusterOut(cluster_info, mon_fracs, monomer_id_sets, monomer_type_sets)
     return out_data
 
 def write_cluster_output(out_data, observer):

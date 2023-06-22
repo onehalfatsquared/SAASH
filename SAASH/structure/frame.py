@@ -32,7 +32,7 @@ class Event(Enum):
 
 class Frame:
 
-    def __init__(self, bodies, clusters, frame_num, monomer_ids, monomer_frac = -1):
+    def __init__(self, bodies, clusters, frame_num, monomer_ids, monomer_types, monomer_frac = -1):
 
         #init a dictionary that stores which id gets mapped to which cluster
         self.__label_dict = dict()
@@ -51,6 +51,7 @@ class Frame:
         self.__monomer_frac = monomer_frac
         self.__frame_num    = frame_num
         self.__monomer_ids  = set(monomer_ids)
+        self.__monomer_types= monomer_types
 
         #set a tolerance for cluster absorbption fraction
         self.__absorb_tol = 0.49
@@ -194,6 +195,10 @@ class Frame:
     def get_monomer_ids(self):
 
         return self.__monomer_ids
+
+    def get_monomer_types(self):
+
+        return self.__monomer_types
 
     def get_cluster_size_distribution(self, observer):
         #compute the distribution of cluster sizes in the frame
@@ -729,6 +734,7 @@ def get_data_from_snap(snap, sim, frame_num):
     #for each group, create a cluster
     clusters     = []
     monomer_ids  = []
+    monomer_types= []
     num_monomers = 0
     for group in G:
 
@@ -748,6 +754,7 @@ def get_data_from_snap(snap, sim, frame_num):
         #increment the number of free monomers
         else:
             monomer_ids.append(group[0])
+            monomer_types.append(bodies[group[0]].get_type())
             num_monomers += 1
 
 
@@ -755,5 +762,5 @@ def get_data_from_snap(snap, sim, frame_num):
     monomer_frac = num_monomers / len(bodies)
     
     #create a Frame object for this frame and return it
-    current_frame = Frame(bodies, clusters, frame_num, monomer_ids, monomer_frac) 
+    current_frame = Frame(bodies, clusters, frame_num, monomer_ids, monomer_types, monomer_frac) 
     return current_frame

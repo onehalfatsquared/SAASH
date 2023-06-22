@@ -195,15 +195,30 @@ class SimInfo:
 
         #loop over all interacting particle types to get number of bodies
         body_set = set()
+        type_set = set()
         for atom_type in self.interacting_types:
 
             condition = (particle_info['type'] == atom_type)
             particle_list = set(particle_info.loc[condition]['body'])
             body_set = body_set.union(particle_list)
 
+
         #set the number of bodies as the length of the body_set
         self.num_bodies = len(body_set)
         print("This simulation output contains {} subunits".format(self.num_bodies))
+
+        #if there are multiple subunit types, get the counts for each
+        types   = particle_info.loc[list(body_set)]['type']
+        counter = types.value_counts()
+        counter = dict(counter)
+
+        #print the distribution of subunits if there are multiple
+        self.num_subunit_types = len(counter)
+        if self.num_subunit_types > 1:
+
+            for sub_type in counter:
+                print("{} subunits have type {}".format(counter[sub_type], sub_type))
+
 
         #loop over all nano types to get number of nanoparticles
         body_set = set()
@@ -341,3 +356,11 @@ class SimInfo:
         max_dist_overall = np.max(np.array(max_distance))
 
         return max_dist_overall
+
+    def multitype(self):
+        #if there is one subunit type return False. If there are several, return true
+
+        if self.num_subunit_types > 1:
+            return True
+
+        return False
