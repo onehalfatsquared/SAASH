@@ -28,17 +28,20 @@ from .util import neighborgrid as ng
 class SimInfo:
 
     def __init__(self, snap, frames, ixn_file = "interactions.txt", cutoff_mult = 1.35, 
-                 radius_mult = 1.6, ngrid_R = None):
-
+                 radius_mult = 1.6, ngrid_R = None, verbose = True):
+        
+        #do a verbosity check
+        self.verbose = verbose
+        
         #print an initialization message
-        print("\nInitializing SimInfo and Neighborgrid...")
+        self.vprint("\nInitializing SimInfo and Neighborgrid...")
 
         #set the directly given variables
         self.frames = frames
-        print("This simulation output contains {} frames".format(frames))
         self.cutoff_mult = cutoff_mult
         self.radius_mult = radius_mult
         self.ngrid_R     = ngrid_R
+        self.vprint("This simulation output contains {} frames".format(frames))
 
         #set the bond and nanoparticle information using ixn_file
         self.bonds = []
@@ -75,13 +78,13 @@ class SimInfo:
 
         #get the max subunit size
         self.max_subunit_size = self.__get_max_subunit_size(snap)
-        print("The largest center-to-atom distance is {}".format(self.max_subunit_size))
+        self.vprint("The largest center-to-atom distance is {}".format(self.max_subunit_size))
 
         #construct a neighborgrid using the sim box and info on interaction ranges
         self.ngrid = None
         self.__create_neighbor_grid()
 
-        print("\n")
+        self.vprint("\n")
 
         #check if the number of particles is zero and throw error
         if (self.num_bodies == 0):
@@ -166,7 +169,7 @@ class SimInfo:
         #compute the largest bond distance in the simulation
         bond_lengths = [bond.get_cutoff() for bond in self.bonds]
         self.largest_bond_distance = np.max(bond_lengths)
-        print("The largest rest bond distance is {}".format(self.largest_bond_distance))
+        self.vprint("The largest rest bond distance is {}".format(self.largest_bond_distance))
 
         return
 
@@ -205,7 +208,7 @@ class SimInfo:
 
         #set the number of bodies as the length of the body_set
         self.num_bodies = len(body_set)
-        print("This simulation output contains {} subunits".format(self.num_bodies))
+        self.vprint("This simulation output contains {} subunits".format(self.num_bodies))
 
         #if there are multiple subunit types, get the counts for each
         types   = particle_info.loc[list(body_set)]['type']
@@ -217,7 +220,7 @@ class SimInfo:
         if self.num_subunit_types > 1:
 
             for sub_type in counter:
-                print("{} subunits have type {}".format(counter[sub_type], sub_type))
+                self.vprint("{} subunits have type {}".format(counter[sub_type], sub_type))
 
 
         #loop over all nano types to get number of nanoparticles
@@ -230,7 +233,7 @@ class SimInfo:
 
         #set the number of nanoparticles as the length of the body_set
         self.num_nanos = len(nano_list)
-        print("This simulation output contains {} nanoparticles".format(self.num_nanos))
+        self.vprint("This simulation output contains {} nanoparticles".format(self.num_nanos))
 
         return
 
@@ -277,14 +280,14 @@ class SimInfo:
         if self.ngrid_R is not None:
             
             R = self.ngrid_R
-            print("Using user specified neighborgrid distance ", R)
+            self.vprint("Using user specified neighborgrid distance {}".format(R))
 
         else:
 
             #set the interaction range as the longest bond dist or particle size in the sim
             R = np.maximum(self.largest_bond_distance * self.cutoff_mult, 
                            self.max_subunit_size * 2 * self.radius_mult)
-            print("The largest center-to-center distance for neighborgrid has been set to", R)
+            self.vprint("The largest center-to-center distance for neighborgrid has been set to {}".format(R))
 
         #construct the neighborgrid
         self.ngrid = ng.Neighborgrid(lims, R, periodic)
@@ -364,3 +367,10 @@ class SimInfo:
             return True
 
         return False
+        
+    def vprint(self, msg):
+        #only print if verbosity is true
+    
+        if self.verbose:
+            print(msg)
+    
