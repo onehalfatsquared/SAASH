@@ -28,7 +28,7 @@ from structure import cluster
 from structure import frame
 from util import neighborgrid
 
-import analyze as test
+from analyze import *
 import old.analyzeStructures as original
 
 

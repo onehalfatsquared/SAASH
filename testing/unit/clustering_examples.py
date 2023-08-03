@@ -295,7 +295,7 @@ def setupDimerization():
     clusters = []
 
     #do first call on update_clusters - sets the initial cluster with id 0
-    f0 = frame.Frame(bodies, clusters, 0, [0,1], 1)
+    f0 = frame.Frame(bodies, clusters, 0, [0,1], [0,0], 1)
     f0.create_first_frame(cluster_info, 0, observer)
 
     #set old bodies to bodies, make new bodies, make cluster with both bodies
@@ -308,7 +308,7 @@ def setupDimerization():
     clusters.append(cluster.Cluster(bodies, 1))
 
     #call update again
-    f1 = frame.Frame(bodies, clusters, 1, [], 0)
+    f1 = frame.Frame(bodies, clusters, 1, [], [], 0)
     f1.update(cluster_info, f0, observer)
 
     return cluster_info

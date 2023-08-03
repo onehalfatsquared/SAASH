@@ -18,8 +18,7 @@ import numpy as np
 import pandas as pd
 
 import warnings
-import sys
-import os
+import sys, os
 
 from .structure import body
 from .util import neighborgrid as ng

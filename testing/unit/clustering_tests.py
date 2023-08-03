@@ -129,12 +129,12 @@ def testDimerization():
     cluster_info = examples.setupExample('dimerization')
 
     #check there is a cluster with two bodies, and monomer gain data says 2
-    # print(cluster_info[0].get_data())
+    #print(cluster_info[0].get_data())
 
     assert(cluster_info[0].get_data()[0]['num_bodies'] == 2)
     assert(cluster_info[0].get_data()[0]['monomer_fraction'] == 0)
 
-    # print(cluster_info[0].get_monomer_gain_data())
+    #print(cluster_info[0].get_monomer_gain_data())
 
     assert(cluster_info[0].get_monomer_gain_data()[1]['num_bodies'] == 2)
     assert(cluster_info[0].get_monomer_gain_data()[1]['monomer_fraction'] == 1)
