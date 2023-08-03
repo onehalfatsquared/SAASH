@@ -50,15 +50,15 @@ class InitialConfigurationGenerator:
         self.state_dict = self._make_state_db(db_loc)
         self.target_state_rep = self.state_dict[target_state]
 
-        # Load the final snapshot
+        # Load the final snapshot as reference
         with gsd.hoomd.open(name=gsd_file, mode="rb") as gsd_file:
-            self.snap = gsd_file[frame]
+            self.ref_snap = gsd_file[frame]
 
         # Create a SimInfo object and extract needed details from the system
-        self.siminfo  = SimInfo(self.snap, 1, ixn_file=ixn_file, verbose=False)
-        self.box_size = self.snap.configuration.box[0:3]
+        self.siminfo  = SimInfo(self.ref_snap, 1, ixn_file=ixn_file, verbose=False)
+        self.box_size = self.ref_snap.configuration.box[0:3]
         self.num_subs = self.siminfo.num_bodies
-        self.monomers = list(get_data_from_snap(self.snap, self.siminfo, -1).get_monomer_ids())
+        self.monomers = list(get_data_from_snap(self.ref_snap, self.siminfo, -1).get_monomer_ids())
 
         #get the monomer fraction, and the fraction of monomers a target takes up
         self.mon_frac = float(len(self.monomers)) / float(self.num_subs)
@@ -72,6 +72,12 @@ class InitialConfigurationGenerator:
 
         #set parameters used in the processing
         self.__widening_factor = 1.1 #multiply bounding box of target by this 
+
+        #define a bounding box for the target state using its positions
+        self._bound_target_config()
+
+        #setup the grid for counting subunits within the domain
+        self._setup_grid()
 
         return
     
@@ -362,22 +368,23 @@ class InitialConfigurationGenerator:
 
         return 
     
-    def _make_new_snap(self):
-        #makes a new HOOMD Frame and fills it with info from the modified snap
+    def _make_new_snap(self, old_snap):
+        #makes a new HOOMD Frame and fills it with info from the provided snap
 
         #create new frame
-        new_snap = gsd.hoomd.Frame()
+        nsnap = gsd.hoomd.Frame()
 
+        ns = self.num_subs #shortcut for number of subunits
         #fill it with required info. only include info for centers
-        new_snap.particles.N = self.num_subs
-        new_snap.configuration.box = self.snap.configuration.box
-        new_snap.particles.types = self.snap.particles.types
-        new_snap.particles.position = self.snap.particles.position[0:self.num_subs]
-        new_snap.particles.orientation = self.snap.particles.orientation[0:self.num_subs]
-        new_snap.particles.typeid = self.snap.particles.typeid[0:self.num_subs]
-        new_snap.particles.moment_inertia = self.snap.particles.moment_inertia[0:self.num_subs]
+        nsnap.particles.N              = self.num_subs
+        nsnap.configuration.box        = old_snap.configuration.box
+        nsnap.particles.types          = old_snap.particles.types
+        nsnap.particles.position       = old_snap.particles.position[0:ns].copy()
+        nsnap.particles.orientation    = old_snap.particles.orientation[0:ns].copy()
+        nsnap.particles.typeid         = old_snap.particles.typeid[0:ns]
+        nsnap.particles.moment_inertia = old_snap.particles.moment_inertia[0:ns]
 
-        return new_snap
+        return nsnap
     
     def _print_result(self, num_to_add):
         #print a message upon succesful generation
@@ -402,18 +409,15 @@ class InitialConfigurationGenerator:
         elif num_to_add > self.max_targets:
             err_msg = "This snapshot can only support adding up to {} targets. You specified {}.".format(self.max_targets, num_to_add)
             raise ValueError(err_msg)
+
+        #create a new snap to modify to make the new config
+        self.snap = self._make_new_snap(self.ref_snap)
         
-        #place targets if a positive integer in given
+        #place targets if a positive integer is given
         if num_to_add > 0:
         
             #choose monomer ids that will become the target, and which remain
             self._new_target_mons, self._remaining = self._select_monomers(num_to_add)
-
-            #define a bounding box for the target state using its positions
-            self._bound_target_config()
-
-            #setup the grid for counting subunits within the domain
-            self._setup_grid()
 
             #determine a location(s) to place the target
             target_centers = self._choose_target_location(num_to_add)
@@ -422,7 +426,7 @@ class InitialConfigurationGenerator:
             self._place_target(target_centers)
 
         #make a new snap containing the minimum info needed to init a simulation
-        new_snap = self._make_new_snap()
+        new_snap = self._make_new_snap(self.snap)
 
         #optional final message
         if verbose:
