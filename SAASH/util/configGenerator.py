@@ -84,7 +84,21 @@ class InitialConfigurationGenerator:
             print("Adding {} targets gives monomer fraction {}".format(num, current_frac))
 
         return
-    
+
+    def get_matching_num(self, frac):
+        #return the num of targets to add to get monomer fraction closest to the input
+
+        closest_key = None
+        closest_distance = 1000
+
+        for key, value in self.num_to_frac.items():
+            distance = abs(value - frac)
+            if distance < closest_distance:
+                closest_distance = distance
+                closest_key = key
+
+        return closest_key
+
     def get_max_additions(self):
         #determine the max number of targets that can be added
 
