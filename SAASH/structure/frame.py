@@ -282,7 +282,7 @@ class Frame:
         '''
 
         #get the list of observables to compute and grab them from cluster
-        common = sorted(observer.get_identifying_observables(),reverse=True)
+        common = sorted(observer.get_distribution_observables(),reverse=True)
         values = [observer.compute_observable(cluster,obs) for obs in common]
 
         #sort each value for unique representations and flatten the list

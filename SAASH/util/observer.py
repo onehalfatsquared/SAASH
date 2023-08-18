@@ -45,8 +45,8 @@ class Observer:
         #init a set of observables to compute
         self.__observable_set = set()
 
-        #define common identifying observables for clusters
-        self.__identifying_set = set(['bonds', 'types'])
+        #store observables that need to be defined as a distribution
+        self.__distribution_set = set(['bonds', 'bond_counts', 'types'])
 
         #init defaults for frames
         self.__first_frame = 0
@@ -252,10 +252,10 @@ class Observer:
         return
 
 
-    def get_identifying_observables(self):
-        #return the active observables that are in the common identifying set
+    def get_distribution_observables(self):
+        #return the active observables that are distributions
 
-        common = [obs for obs in self.get_observables() if obs in self.__identifying_set]
+        common = [obs for obs in self.get_observables() if obs in self.__distribution_set]
         return common
 
     def __set_outfile_name(self, gsd_file):
