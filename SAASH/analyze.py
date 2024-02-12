@@ -464,7 +464,7 @@ def run_analysis(gsd_file, ixn_file = "interactions.txt", observer = None):
     #get number of monomers and dimers at each frame in the sim
 
     #get the collection of snapshots and get number of frames
-    snaps = gsd.hoomd.open(name=gsd_file, mode="rb")
+    snaps = gsd.hoomd.open(name=gsd_file, mode="r")
     snap = snaps[0]
     frames = len(snaps)
 

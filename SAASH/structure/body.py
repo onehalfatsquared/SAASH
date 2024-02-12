@@ -505,7 +505,7 @@ def get_body_center_dict(snap, sim, unique_bods):
 
     #loop over the first num_bodies + num_nanos elements. These are all centers
     body_count = sim.num_bodies + sim.num_nanos
-    for i in range(body_count):
+    for i in range(sim.body_offset, sim.body_offset+body_count):
 
         #get the body id and see if it is in the set we are considering
         body_id = snap.particles.body[i]
