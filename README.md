@@ -1,4 +1,4 @@
-# Self Assembly Analysis Script for HOOMD (SAASH)
+# Self Assembly Analysis Suite for HOOMD (SAASH)
 
 This repository contains a general analysis script for tracking the progress of self-assembling subunits simulated using HOOMD. 
 
