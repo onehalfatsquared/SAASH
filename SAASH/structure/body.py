@@ -115,7 +115,7 @@ class Particle:
         
         return False
 
-    def bind(self, particle, bond, bond_dict = None):
+    def bind(self, particle, bond, bond_dict = None, use_HOOMD_id = False):
         #bind the two particles together by augmenting their bodies bond list
 
         #get the host and target particle body
@@ -125,6 +125,11 @@ class Particle:
         #get the id of each of these bodies
         target_body_id = target_body.get_id()
         host_body_id   = host_body.get_id()
+        
+        #if we want HOOMD body ids instead of new 0 indexed ids
+        if use_HOOMD_id:
+            target_body_id = target_body.get_HOOMD_id()
+            host_body_id   = host_body.get_HOOMD_id()
 
         #bind the host particle body to the given particle body
         if not host_body.is_bonded(target_body):
@@ -169,10 +174,11 @@ class Particle:
 
 class Body:
 
-    def __init__(self, particle_pos, particle_type, body_index):
+    def __init__(self, particle_pos, particle_type, body_index, HOOMD_id):
 
         #set the body index - corresponds to placement in the array of bodies
         self.__body_index = body_index
+        self.__HOOMD_id   = HOOMD_id
 
         #set a cluster index, init to -1
         self.__cluster       = None
@@ -270,6 +276,10 @@ class Body:
     def get_id(self):
 
         return self.__body_index
+        
+    def get_HOOMD_id(self):
+    
+        return self.__HOOMD_id
 
     def get_cluster(self):
 
@@ -405,7 +415,7 @@ def get_nanoparticles(snap, sim):
 ####################################################################
 
 
-def check_particle_pairs(particles1, particles2, cutoff, sim, bond, bond_dict):
+def check_particle_pairs(particles1, particles2, cutoff, sim, bond, bond_dict, use_HOOMD_id=False):
     #check if any of the particle1's are within cutoff of particle2's
 
     #do pairwise comparisons between each particle
@@ -414,7 +424,7 @@ def check_particle_pairs(particles1, particles2, cutoff, sim, bond, bond_dict):
 
             #check if particles are within cutoff. If so, create a bond between bodies
             if (particle1.is_bonded(particle2, cutoff*sim.cutoff_mult, sim.box_dim)):
-                particle1.bind(particle2, bond, bond_dict)
+                particle1.bind(particle2, bond, bond_dict, use_HOOMD_id=use_HOOMD_id)
                 # print("binding {} with {}".format(particle1.get_type(), particle2.get_type()))
                 # print(particle1.get_position(), particle2.get_position())
                 return True
@@ -424,7 +434,7 @@ def check_particle_pairs(particles1, particles2, cutoff, sim, bond, bond_dict):
 
 
 
-def check_body_pair(body1, body2, sim, bond_dict):
+def check_body_pair(body1, body2, sim, bond_dict, use_HOOMD_id=False):
     ''' Check if the pair of bodies contains particles that are within the cutoff of a 
         given bond type. If one is found, we assume the bodies are bonded and stop 
         checking for further bonds
@@ -444,7 +454,7 @@ def check_body_pair(body1, body2, sim, bond_dict):
         particles2 = body2.get_particles_by_type(type2)
 
         #do pairwise comparisons between each particle
-        found_bond = check_particle_pairs(particles1, particles2, cutoff, sim, bond, bond_dict)
+        found_bond = check_particle_pairs(particles1, particles2, cutoff, sim, bond, bond_dict, use_HOOMD_id=use_HOOMD_id)
         if (found_bond):
             return
 
@@ -457,14 +467,14 @@ def check_body_pair(body1, body2, sim, bond_dict):
         particles2 = body2.get_particles_by_type(type1)
 
         #do pairwise comparisons between each particle
-        found_bond = check_particle_pairs(particles1, particles2, cutoff, sim, bond, bond_dict)
+        found_bond = check_particle_pairs(particles1, particles2, cutoff, sim, bond, bond_dict, use_HOOMD_id=use_HOOMD_id)
         if (found_bond):
             return
 
     return
 
 
-def get_bonded_bodies(bodies, sim, bond_dict):
+def get_bonded_bodies(bodies, sim, bond_dict, use_HOOMD_id=False):
     #determine bonded bodies by looping over each neighborhood, bond type, and particle
 
     #extract and update the neighborgrid using the current bodies info
@@ -491,7 +501,7 @@ def get_bonded_bodies(bodies, sim, bond_dict):
                 continue
 
             #check if the two bodies contain bonded particles and update accordingly
-            check_body_pair(current_body, target_body, sim, bond_dict)
+            check_body_pair(current_body, target_body, sim, bond_dict, use_HOOMD_id=use_HOOMD_id)
 
     return
 
@@ -558,7 +568,7 @@ def create_body(filtered_pos, filtered_bod, filtered_types, body_info_dict, body
 
 
     #create the body, set its position and type from the dict, append it to the list
-    current_body = Body(particle_positions, particle_types, body_index)
+    current_body = Body(particle_positions, particle_types, body_index, body_id)
     current_body.set_position(body_info_dict[body_id][0])
     current_body.set_type(body_info_dict[body_id][1])
 
