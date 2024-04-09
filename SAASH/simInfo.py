@@ -67,6 +67,8 @@ class SimInfo:
 
         #determine the number of interacting bodies and nanoparticles from the snap
         self.num_bodies    = 0
+        self.body_set      = set()
+        self.body_offset   = 0
         self.num_nanos     = 0
         self.__get_num_bodies(particle_info)
 
@@ -203,7 +205,10 @@ class SimInfo:
             condition = (particle_info['type'] == atom_type)
             particle_list = set(particle_info.loc[condition]['body'])
             body_set = body_set.union(particle_list)
-
+            
+        #set the body id set. get offset as the first id
+        self.body_set = body_set.copy()
+        self.body_offset = list(self.body_set)[0]
 
         #set the number of bodies as the length of the body_set
         self.num_bodies = len(body_set)
@@ -301,20 +306,8 @@ class SimInfo:
         #init a list to store the 'radii' of each subunit type
         max_distance = []
 
-        #init a listto store all center types and an example body_id
-        center_types = []
-        example_bodies = []
-
-        #loop over the first num_bodies entries of particles, which contains the centers
-        for i in range(self.num_bodies):
-
-            #get the type for the centers and log an example body_id
-            new_type = snap.particles.types[snap.particles.typeid[i]]
-            if new_type not in center_types:
-                center_types.append(new_type)
-                example_bodies.append(snap.particles.body[i])
-
         #grab each body and get the distance to each pseudoatom
+        example_bodies = list(self.body_set.copy())
         for body_id in example_bodies:
 
             #check that this is a rigid body
@@ -325,7 +318,6 @@ class SimInfo:
             masked_types = snap.particles.typeid[mask]
             if len(masked_types) == 0:
                 continue
-
             center_type  = masked_types[0]
 
             #get positions for the masked entries
