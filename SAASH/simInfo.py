@@ -208,7 +208,9 @@ class SimInfo:
             
         #set the body id set. get offset as the first id
         self.body_set = body_set.copy()
-        self.body_offset = list(self.body_set)[0]
+        #TODO: fix this for the general case
+        self.body_offset = min(self.body_set)
+
 
         #set the number of bodies as the length of the body_set
         self.num_bodies = len(body_set)
